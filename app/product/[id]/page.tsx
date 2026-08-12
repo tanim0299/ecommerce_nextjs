@@ -54,7 +54,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     handleQuickAddToCart,
     likedProducts, 
     handleToggleWishlist, 
-    setIsCartOpen 
+    setIsCartOpen,
+    resolveImageUrl
   } = useApp();
 
   // Find the product dynamically from all lists
@@ -155,7 +156,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             onMouseLeave={() => setIsZooming(false)}
           >
             <img 
-              src={product.image} 
+              src={resolveImageUrl(product.image)} 
               alt={product.name} 
               className={`w-full h-full object-cover ${MOCKUP_FILTERS[selectedMockupIdx].filterClass}`}
             />
@@ -166,7 +167,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 aria-hidden="true"
               >
                 <img
-                  src={product.image}
+                  src={resolveImageUrl(product.image)}
                   alt=""
                   className={`pointer-events-none absolute max-w-none object-cover ${MOCKUP_FILTERS[selectedMockupIdx].filterClass}`}
                   style={{
@@ -198,7 +199,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 }`}
               >
                 <img 
-                  src={product.image} 
+                  src={resolveImageUrl(product.image)} 
                   alt={`${product.name} preview`} 
                   className={`w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity ${mock.filterClass}`}
                 />
@@ -484,7 +485,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     </div>
 
                     <img
-                      src={prod.image}
+                      src={resolveImageUrl(prod.image)}
                       alt={prod.name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />

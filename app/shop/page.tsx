@@ -71,7 +71,7 @@ const CATEGORY_BANNERS: { [key: string]: string } = {
 function ShopCatalogContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { likedProducts, handleToggleWishlist, handleQuickAddToCart } = useApp();
+  const { likedProducts, handleToggleWishlist, handleQuickAddToCart, resolveImageUrl } = useApp();
 
   // Selected filters in state
   const initialCategory = searchParams.get('category') || 'all';
@@ -360,7 +360,7 @@ function ShopCatalogContent() {
           <div className="w-full h-24 md:h-32 rounded-2xl overflow-hidden shadow-xs border border-slate-100/60 relative group">
             <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500 z-10" />
             <img
-              src={CATEGORY_BANNERS[selectedCategory] || '/tshirt-banner.jpg'}
+              src={resolveImageUrl(CATEGORY_BANNERS[selectedCategory] || '/tshirt-banner.jpg')}
               alt={`${selectedCategory} banner`}
               className="w-full h-full object-cover transition-transform duration-[6000ms] ease-out group-hover:scale-[1.02]"
             />
@@ -437,7 +437,7 @@ function ShopCatalogContent() {
                         </div>
 
                         <img
-                          src={prod.image}
+                          src={resolveImageUrl(prod.image)}
                           alt={prod.name}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
