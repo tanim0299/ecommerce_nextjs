@@ -10,6 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-brand-orange: #f97316;
   
   --animate-slide-progress: slide-progress 5s linear infinite;
   --animate-fade-in: fade-in 1s ease-out forwards;
