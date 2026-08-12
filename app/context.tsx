@@ -19,6 +19,16 @@ export interface UserProfile {
   address: string;
 }
 
+export interface SystemConfig {
+  title: string;
+  logo: string;
+  favicon: string;
+  phones: string[];
+  emails: string[];
+  address: string;
+  google_map: string;
+}
+
 interface AppContextType {
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
@@ -39,6 +49,9 @@ interface AppContextType {
   handleToggleWishlist: (productId: string) => void;
   handleRemoveFromCart: (itemId: string) => void;
   handleUpdateCartQty: (itemId: string, qty: number) => void;
+  systemConfig: SystemConfig | null;
+  isConfigLoading: boolean;
+  resolveImageUrl: (path: string) => string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -51,6 +64,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
+  const [isConfigLoading, setIsConfigLoading] = useState(true);
+
+  const resolveImageUrl = (path: string) => {
+    if (!path) return '';
+    const basePath = process.env.NEXT_PUBLIC_IMAGE_BASE_PATH || '';
+    const cleanBasePath = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      try {
+        const urlObj = new URL(path);
+        return `${cleanBasePath}${urlObj.pathname}`;
+      } catch (e) {
+        return path;
+      }
+    }
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${cleanBasePath}${cleanPath}`;
+  };
+
+  // Fetch System Configuration
+  useEffect(() => {
+    const fetchSystemConfig = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/system-config`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && json.data) {
+            const data = { ...json.data };
+            
+            if (data.logo) data.logo = resolveImageUrl(data.logo);
+            if (data.favicon) data.favicon = resolveImageUrl(data.favicon);
+
+            setSystemConfig(data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load system config:', error);
+      } finally {
+        setIsConfigLoading(false);
+      }
+    };
+    fetchSystemConfig();
+  }, []);
+
+  // Update document title and favicon dynamically on client side
+  useEffect(() => {
+    if (systemConfig) {
+      if (systemConfig.title) {
+        document.title = systemConfig.title;
+      }
+      if (systemConfig.favicon) {
+        let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.getElementsByTagName('head')[0].appendChild(link);
+        }
+        link.href = systemConfig.favicon;
+      }
+    }
+  }, [systemConfig]);
 
   // Load state from localStorage on client mount
   useEffect(() => {
@@ -143,7 +219,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       handleQuickAddToCart,
       handleToggleWishlist,
       handleRemoveFromCart,
-      handleUpdateCartQty
+      handleUpdateCartQty,
+      systemConfig,
+      isConfigLoading,
+      resolveImageUrl
     }}>
       {children}
     </AppContext.Provider>

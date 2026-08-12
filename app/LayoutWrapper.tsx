@@ -56,7 +56,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     handleQuickAddToCart,
     handleToggleWishlist,
     handleRemoveFromCart,
-    handleUpdateCartQty
+    handleUpdateCartQty,
+    systemConfig,
+    isConfigLoading,
+    resolveImageUrl
   } = useApp();
 
   const [showSearchSuggestions, setShowSearchSuggestions] = React.useState(false);
@@ -95,13 +98,52 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     }, 2500);
   };
 
+  const renderLogo = (isFooter = false) => {
+    if (isConfigLoading || !systemConfig) {
+      return (
+        <div className={`h-8 w-28 rounded-md ${isFooter ? 'shimmer-effect' : 'shimmer-effect-light'}`} />
+      );
+    }
+    if (systemConfig.logo) {
+      return (
+        <img 
+          src={systemConfig.logo} 
+          alt={systemConfig.title} 
+          className="h-9 w-auto object-contain" 
+        />
+      );
+    }
+    const titleParts = systemConfig.title.split(' ');
+    const firstPart = titleParts[0] || 'FABRI';
+    const secondPart = titleParts.slice(1).join(' ') || 'LIFE';
+    return (
+      <>
+        <svg viewBox="0 0 60 70" className="w-8 h-9 text-brand-orange group-hover:scale-105 transition-transform" fill="currentColor">
+          <polygon points="5,38 35,8 45,18 15,48" />
+          <polygon points="17,50 35,32 45,42 27,60" />
+          <polygon points="29,66 39,56 39,66" />
+        </svg>
+        <div className="flex items-baseline text-2xl tracking-tighter">
+          <span className={`font-extrabold ${isFooter ? 'text-white' : 'text-slate-950'}`}>{firstPart}</span>
+          <span className={`font-light ${isFooter ? 'text-slate-300' : 'text-slate-500'}`}>{secondPart}</span>
+        </div>
+      </>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Banner Message */}
       <div className="w-full bg-slate-950 text-white py-2 px-4 text-center text-[10px] font-black uppercase tracking-widest border-b border-slate-900 flex justify-center items-center gap-6">
         <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5 text-amber-500" /> FREE SHIPPING ON ORDERS OVER BDT 1500!</span>
         <span className="hidden md:inline text-slate-500">•</span>
-        <span className="hidden md:flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-amber-500" /> HOTLINE: +880 9612 000 000</span>
+        <span className="hidden md:flex items-center gap-1">
+          <Phone className="w-3.5 h-3.5 text-amber-500" /> HOTLINE: {isConfigLoading || !systemConfig ? (
+            <span className="h-3 w-24 shimmer-effect rounded inline-block" />
+          ) : (
+            systemConfig.phones[0]
+          )}
+        </span>
       </div>
 
       {/* Gorgeous Premium Header */}
@@ -109,15 +151,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-6">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <svg viewBox="0 0 60 70" className="w-8 h-9 text-brand-orange group-hover:scale-105 transition-transform" fill="currentColor">
-              <polygon points="5,38 35,8 45,18 15,48" />
-              <polygon points="17,50 35,32 45,42 27,60" />
-              <polygon points="29,66 39,56 39,66" />
-            </svg>
-            <div className="flex items-baseline text-2xl tracking-tighter">
-              <span className="font-extrabold text-slate-950">FABRI</span>
-              <span className="font-light text-slate-500">LIFE</span>
-            </div>
+            {renderLogo(false)}
           </Link>
 
            {/* Mega Menu Navigation */}
@@ -249,18 +283,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           {/* Brand Info */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <svg viewBox="0 0 60 70" className="w-8 h-9 text-brand-orange" fill="currentColor">
-                <polygon points="5,38 35,8 45,18 15,48" />
-                <polygon points="17,50 35,32 45,42 27,60" />
-                <polygon points="29,66 39,56 39,66" />
-              </svg>
-              <div className="flex items-baseline text-2xl tracking-tighter">
-                <span className="font-extrabold text-white">FABRI</span>
-                <span className="font-light text-slate-300">LIFE</span>
-              </div>
+              {renderLogo(true)}
             </div>
             <p className="text-slate-400 font-light leading-relaxed">
-              Bangladesh&apos;s premium clothing e-commerce retail store. Experience the finest combed cotton fabrics, refined tailoring, and modern designs for your everyday lifestyle.
+              Premium clothing e-commerce retail store. Experience the finest combed cotton fabrics, refined tailoring, and modern designs for your everyday lifestyle.
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 mt-2">
@@ -332,9 +358,36 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </div>
             
             {/* Contact Details */}
-            <div className="flex flex-col gap-1 text-xs pl-3 mt-2 text-slate-400 font-light">
-              <span>Helpline: +880 9612 000 000</span>
-              <span>Email: support@fabrilife.com</span>
+            <div className="flex flex-col gap-2 text-xs pl-3 mt-2 text-slate-400 font-light">
+              {isConfigLoading || !systemConfig ? (
+                <>
+                  <div className="h-3 w-32 shimmer-effect rounded" />
+                  <div className="h-3 w-40 shimmer-effect rounded" />
+                  <div className="h-3 w-48 shimmer-effect rounded" />
+                </>
+              ) : (
+                <>
+                  {systemConfig.phones && systemConfig.phones.length > 0 && (
+                    <span>Helpline: {systemConfig.phones.join(', ')}</span>
+                  )}
+                  {systemConfig.emails && systemConfig.emails.length > 0 && (
+                    <span>Email: {systemConfig.emails.join(', ')}</span>
+                  )}
+                  {systemConfig.address && (
+                    <span>Address: {systemConfig.address}</span>
+                  )}
+                  {systemConfig.google_map && (
+                    <a 
+                      href={systemConfig.google_map} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="inline-flex items-center gap-1 text-brand-orange hover:text-orange-400 font-bold transition-colors mt-1"
+                    >
+                      <MapPin className="w-3.5 h-3.5" /> View Google Map
+                    </a>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -342,7 +395,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         {/* Divider line */}
         <div className="max-w-7xl mx-auto border-t border-slate-900 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium">
           <div>
-            © 2026 Fabrilife, Inc. All rights reserved. Dhaka, Bangladesh.
+            {isConfigLoading || !systemConfig ? (
+              <div className="h-3.5 w-64 shimmer-effect rounded" />
+            ) : (
+              `© 2026 ${systemConfig.title}. All rights reserved. ${systemConfig.address || 'Dhaka, Bangladesh'}.`
+            )}
           </div>
           
           {/* Payment Partners */}
@@ -424,7 +481,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                     {/* Thumbnail */}
                     <div className="w-16 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200/60">
                       <img
-                        src={prod.image}
+                        src={resolveImageUrl(prod.image)}
                         alt={prod.name}
                         className="w-full h-full object-cover"
                       />
@@ -527,7 +584,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   <div className="w-16 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200/60">
                     {item.image ? (
                       <img
-                        src={item.image}
+                        src={resolveImageUrl(item.image)}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />

@@ -97,36 +97,48 @@ export const TSHIRT_PRODUCTS_SHUFFLED_3 = [
   { id: 3, name: "MUSAFIR Raglan Sleeve", price: "950", originalPrice: "1200", image: "/products/prod3.jpg", tag: "New", rating: "4.7", discount: "21%" }
 ];
 
-export const HERO_SLIDES = [
-  {
-    image: "/slide1.jpg",
-    title: "ELEVATE YOUR MODEST STYLE",
-    subtitle: "Simple. Classy. Modest. A complete premium look for every special moment.",
-    badge: "Panjabi Combo"
-  },
-  {
-    image: "/slide2.jpg",
-    title: "REFINED MODESTY 2026",
-    subtitle: "Elegant cuts, comfortable fabric, and timeless modest style for every occasion.",
-    badge: "Believers Collection"
-  },
-  {
-    image: "/slide3.jpg",
-    title: "STYLE IN MOTION",
-    subtitle: "Built for everyday movement with effortless comfort and athletic design.",
-    badge: "Premium Footwear"
-  }
-];
+interface SliderItem {
+  id: number;
+  sl: number;
+  image: string;
+  url: string;
+}
 
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [sliders, setSliders] = useState<SliderItem[]>([]);
+  const [isSlidersLoading, setIsSlidersLoading] = useState(true);
 
   const {
     likedProducts,
     searchQuery,
     handleQuickAddToCart,
-    handleToggleWishlist
+    handleToggleWishlist,
+    resolveImageUrl
   } = useApp();
+
+  // Fetch dynamic sliders
+  useEffect(() => {
+    const fetchSliders = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/sliders`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            const sortedSliders = json.data.sort((a: any, b: any) => (a.sl || 0) - (b.sl || 0));
+            setSliders(sortedSliders);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load sliders:', error);
+      } finally {
+        setIsSlidersLoading(false);
+      }
+    };
+    fetchSliders();
+  }, []);
 
   // Search filter lists
   const filteredTshirts = TSHIRT_PRODUCTS.filter(p =>
@@ -186,7 +198,7 @@ export default function Home() {
             </div>
 
             <img
-              src={prod.image}
+              src={resolveImageUrl(prod.image)}
               alt={prod.name}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -231,11 +243,12 @@ export default function Home() {
 
   // Auto-play Slider
   useEffect(() => {
+    if (sliders.length === 0) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % sliders.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, [currentSlide]);
+  }, [currentSlide, sliders]);
 
   // Autoplay Category Slider (Endless/Infinite Scroll)
   useEffect(() => {
@@ -299,52 +312,74 @@ export default function Home() {
         <>
           {/* Gorgeous Premium Hero Slider */}
           <section className="relative w-full aspect-[2.6/1] md:aspect-[3/1] rounded-2xl overflow-hidden shadow-2xl bg-slate-900 group">
-            <div className="w-full h-full relative">
-              {HERO_SLIDES.map((slide, idx) => {
-                const isActive = idx === currentSlide;
-                return (
-                  <div
-                    key={idx}
-                    className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${
-                      isActive ? "opacity-100 scale-100 z-10" : "opacity-0 scale-[1.03] z-0 pointer-events-none"
-                    }`}
-                  >
-                    <img
-                      src={slide.image}
-                      alt={slide.title}
-                      className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${
-                        isActive ? "scale-100" : "scale-105"
-                      }`}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            {isSlidersLoading ? (
+              <div className="w-full h-full shimmer-effect-light flex flex-col justify-center p-8 md:p-16 gap-3">
+                <div className="h-3.5 w-24 bg-white/40 rounded-lg" />
+                <div className="h-7 w-2/3 md:w-1/2 bg-white/40 rounded-xl" />
+                <div className="h-4 w-3/4 md:w-2/5 bg-white/40 rounded-lg" />
+                <div className="h-9 w-28 bg-white/40 rounded-xl mt-2" />
+              </div>
+            ) : sliders.length === 0 ? (
+              <div className="w-full h-full bg-slate-950 flex items-center justify-center text-center p-6">
+                <span className="text-slate-500 text-xs font-semibold">No promotional banners available.</span>
+              </div>
+            ) : (
+              <>
+                <div className="w-full h-full relative">
+                  {sliders.map((slide, idx) => {
+                    const isActive = idx === currentSlide;
+                    return (
+                      <a
+                        key={slide.id || idx}
+                        href={slide.url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${
+                          isActive ? "opacity-100 scale-100 z-10" : "opacity-0 scale-[1.03] z-0 pointer-events-none"
+                        }`}
+                      >
+                        <img
+                          src={resolveImageUrl(slide.image)}
+                          alt={`Promo Slide ${idx + 1}`}
+                          className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${
+                            isActive ? "scale-100" : "scale-105"
+                          }`}
+                        />
+                      </a>
+                    );
+                  })}
+                </div>
 
-            <button
-              onClick={() => setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/35 hover:bg-amber-500 hover:text-slate-950 text-white flex items-center justify-center backdrop-blur-md transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-105 z-20 cursor-pointer"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/35 hover:bg-amber-500 hover:text-slate-950 text-white flex items-center justify-center backdrop-blur-md transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-105 z-20 cursor-pointer"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+                {sliders.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setCurrentSlide((prev) => (prev - 1 + sliders.length) % sliders.length)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/35 hover:bg-amber-500 hover:text-slate-950 text-white flex items-center justify-center backdrop-blur-md transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-105 z-20 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentSlide((prev) => (prev + 1) % sliders.length)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/35 hover:bg-amber-500 hover:text-slate-950 text-white flex items-center justify-center backdrop-blur-md transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-105 z-20 cursor-pointer"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-              {HERO_SLIDES.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentSlide(idx)}
-                  className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${
-                    idx === currentSlide ? "w-8 bg-amber-500" : "w-2.5 bg-white/50"
-                  }`}
-                />
-              ))}
-            </div>
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                      {sliders.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentSlide(idx)}
+                          className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${
+                            idx === currentSlide ? "w-8 bg-amber-500" : "w-2.5 bg-white/50"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </section>
 
           {/* Top Categories Infinite Carousel */}
@@ -369,7 +404,7 @@ export default function Home() {
                   className="w-[140px] md:w-[170px] shrink-0 aspect-[4/5] rounded-2xl overflow-hidden relative shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 snap-start group border border-slate-100 cursor-pointer"
                 >
                   <img
-                    src={cat.image}
+                    src={resolveImageUrl(cat.image)}
                     alt={cat.name}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
