@@ -40,6 +40,8 @@ interface AppContextType {
   setLikedProducts: React.Dispatch<React.SetStateAction<string[]>>;
   user: UserProfile | null;
   setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
+  token: string | null;
+  setToken: React.Dispatch<React.SetStateAction<string | null>>;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   activeCategory: string;
@@ -52,6 +54,7 @@ interface AppContextType {
   systemConfig: SystemConfig | null;
   isConfigLoading: boolean;
   resolveImageUrl: (path: string) => string;
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -62,10 +65,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [likedProducts, setLikedProducts] = useState<string[]>([]);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
   const [isConfigLoading, setIsConfigLoading] = useState(true);
+
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>>([]);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
 
   const resolveImageUrl = (path: string) => {
     if (!path) return '';
@@ -134,6 +148,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (storedUser) {
       try { setUser(JSON.parse(storedUser)); } catch (e) {}
     }
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+    }
     const storedCart = localStorage.getItem('cart');
     if (storedCart) {
       try { setCart(JSON.parse(storedCart)); } catch (e) {}
@@ -143,6 +161,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try { setLikedProducts(JSON.parse(storedWishlist)); } catch (e) {}
     }
   }, []);
+
+  // Persist token
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
+  }, [token]);
 
   // Persist cart
   useEffect(() => {
@@ -176,6 +203,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleQuickAddToCart = (prod: any) => {
+    if (prod.stock_status === 'out_of_stock') {
+      showToast('This product is currently out of stock!', 'error');
+      return;
+    }
     handleAddToCart({
       id: `${prod.id}-Black-M`,
       name: prod.name,
@@ -213,6 +244,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isWishlistOpen, setIsWishlistOpen,
       likedProducts, setLikedProducts,
       user, setUser,
+      token, setToken,
       searchQuery, setSearchQuery,
       activeCategory, setActiveCategory,
       handleAddToCart,
@@ -222,9 +254,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       handleUpdateCartQty,
       systemConfig,
       isConfigLoading,
-      resolveImageUrl
+      resolveImageUrl,
+      showToast
     }}>
       {children}
+      {/* Floating Toast notifications */}
+      <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`pointer-events-auto flex items-center gap-3 px-4 py-3.5 rounded-xl border shadow-[0_10px_30px_rgba(0,0,0,0.08)] backdrop-blur-md transition-all duration-300 transform translate-y-0 scale-100 animate-slide-in-right ${
+              t.type === 'success'
+                ? 'bg-emerald-50/90 border-emerald-100 text-emerald-800'
+                : t.type === 'error'
+                ? 'bg-rose-50/90 border-rose-100 text-rose-800'
+                : 'bg-amber-50/90 border-amber-100 text-amber-800'
+            }`}
+          >
+            <span className="text-xs font-bold leading-snug">{t.message}</span>
+          </div>
+        ))}
+      </div>
     </AppContext.Provider>
   );
 }

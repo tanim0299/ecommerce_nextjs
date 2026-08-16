@@ -2,40 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  ShoppingBag, 
-  User, 
-  MapPin, 
-  X, 
-  ChevronLeft, 
-  ChevronRight, 
-  ChevronDown,
-  Star, 
-  Truck, 
-  Heart, 
-  Info, 
-  Plus, 
-  Minus, 
-  CheckCircle,
-  Phone,
-  HelpCircle,
-  Smartphone,
-  Check
+import { useRouter } from 'next/navigation';
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Heart,
 } from 'lucide-react';
-import { PRODUCTS, CATEGORIES, Product, ProductColor } from './data';
 import { useApp } from './context';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  size: string;
-  colorName: string;
-  colorHex: string;
-  quantity: number;
-  image: string;
-}
+import ProductQuickView from './components/ProductQuickView';
 
 export const TOP_CATEGORIES = [
   { name: "Premium Panjabi", image: "/categories/cat1.jpg", count: "45 Items" },
@@ -104,10 +80,65 @@ interface SliderItem {
   url: string;
 }
 
+interface ApiImage {
+  url?: string;
+}
+
+interface ApiRelation {
+  id?: number;
+  name?: string;
+}
+
+interface ApiProduct {
+  id: number;
+  name?: string;
+  sale_price?: number | string | null;
+  regular_price?: number | string | null;
+  discount_price?: number | string | null;
+  is_active?: boolean;
+  has_variant?: boolean;
+  images?: ApiImage[];
+  brand?: ApiRelation | null;
+  sub_category?: ApiRelation | null;
+  variants?: Array<{ id: number }>;
+}
+
+interface FeaturedSubCategory extends ApiRelation {
+  id: number;
+  sl?: number;
+  featured_image?: string;
+  banner?: string;
+  products_count?: number;
+}
+
+interface HomeSubCategory extends ApiRelation {
+  id: number;
+  sl?: number;
+  sub_category_id?: number;
+  sub_category?: ApiRelation | null;
+  category?: ApiRelation | null;
+  item?: ApiRelation | null;
+  home_page_title?: string;
+}
+
+const normalizeName = (value?: string) => value?.trim().toLocaleLowerCase() || '';
+
+const numericPrice = (value?: number | string | null) => {
+  if (value === undefined || value === null || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
 export default function Home() {
+  const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [sliders, setSliders] = useState<SliderItem[]>([]);
   const [isSlidersLoading, setIsSlidersLoading] = useState(true);
+  const [featuredSubCategories, setFeaturedSubCategories] = useState<FeaturedSubCategory[]>([]);
+  const [homeSubCategories, setHomeSubCategories] = useState<HomeSubCategory[]>([]);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
+  const [quickViewProductId, setQuickViewProductId] = useState<number | null>(null);
 
   const {
     likedProducts,
@@ -117,7 +148,7 @@ export default function Home() {
     resolveImageUrl
   } = useApp();
 
-  // Fetch dynamic sliders
+  // Fetch dynamic sliders, featured sub categories, and home sub categories
   useEffect(() => {
     const fetchSliders = async () => {
       try {
@@ -127,7 +158,8 @@ export default function Home() {
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
-            const sortedSliders = json.data.sort((a: any, b: any) => (a.sl || 0) - (b.sl || 0));
+            const sortedSliders = (json.data as SliderItem[])
+              .sort((a, b) => (a.sl || 0) - (b.sl || 0));
             setSliders(sortedSliders);
           }
         }
@@ -137,32 +169,107 @@ export default function Home() {
         setIsSlidersLoading(false);
       }
     };
+    const fetchFeaturedSubCategories = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/featured-sub-categories`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            const sorted = (json.data as FeaturedSubCategory[])
+              .sort((a, b) => (a.sl || 0) - (b.sl || 0));
+            setFeaturedSubCategories(sorted);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load featured sub categories:', error);
+      }
+    };
+    const fetchHomeSubCategories = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/home-sub-categories`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            const sorted = (json.data as HomeSubCategory[])
+              .sort((a, b) => (a.sl || 0) - (b.sl || 0));
+            setHomeSubCategories(sorted);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load home sub categories:', error);
+      }
+    };
+    const fetchProducts = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/products`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            setProducts(json.data.filter((product: ApiProduct) => product.is_active !== false));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load products:', error);
+      } finally {
+        setIsProductsLoading(false);
+      }
+    };
     fetchSliders();
+    fetchFeaturedSubCategories();
+    fetchHomeSubCategories();
+    fetchProducts();
   }, []);
 
-  // Search filter lists
-  const filteredTshirts = TSHIRT_PRODUCTS.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredShuffled1 = TSHIRT_PRODUCTS_SHUFFLED_1.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredShuffled2 = TSHIRT_PRODUCTS_SHUFFLED_2.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredShuffled3 = TSHIRT_PRODUCTS_SHUFFLED_3.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
-  const hasActiveSearch = searchQuery.trim().length > 0;
-  const totalSearchMatches = filteredTshirts.length + filteredShuffled1.length + filteredShuffled2.length + filteredShuffled3.length;
 
-  const renderProductCard = (prod: any, idx: number) => {
+  const productsForSubCategory = (homeCat: HomeSubCategory) => {
+    const subCategoryId = Number(
+      homeCat.sub_category_id ?? homeCat.sub_category?.id ?? homeCat.id
+    );
+    const subCategoryName = normalizeName(homeCat.sub_category?.name ?? homeCat.name);
+
+    return products.filter(product => {
+      const productSubCategoryId = Number(product.sub_category?.id);
+      const idsMatch = Number.isFinite(subCategoryId)
+        && Number.isFinite(productSubCategoryId)
+        && subCategoryId === productSubCategoryId;
+      const namesMatch = Boolean(subCategoryName)
+        && subCategoryName === normalizeName(product.sub_category?.name);
+
+      return idsMatch || namesMatch;
+    });
+  };
+
+  const renderProductCard = (prod: ApiProduct, idx: number, isSliderCard = false) => {
     const isLiked = likedProducts.includes(prod.id.toString());
+    const imageUrls = (prod.images ?? [])
+      .map(image => image.url)
+      .filter((url): url is string => Boolean(url));
+    const [primaryImage, hoverImage] = imageUrls;
+    const salePrice = numericPrice(prod.sale_price);
+    const regularPrice = numericPrice(prod.regular_price);
+    const displayedPrice = salePrice !== null
+      ? salePrice
+      : regularPrice;
+    const hasDiscount = displayedPrice !== null
+      && regularPrice !== null
+      && regularPrice > displayedPrice;
+    const savingAmount = hasDiscount ? regularPrice - displayedPrice : null;
+    const hasVariants = Boolean(prod.has_variant || (prod.variants?.length ?? 0) > 0);
+
     return (
       <div
-        key={idx}
-        className="min-w-[240px] md:min-w-[270px] flex-1 bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-amber-500/40 shadow-xs hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 snap-start flex flex-col group relative"
+        key={prod.id || idx}
+        className={`${isSliderCard
+          ? 'w-[220px] sm:w-[240px] md:w-[270px] shrink-0 snap-start'
+          : 'w-full min-w-0'
+          } bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-amber-500/40 shadow-xs hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 flex flex-col group relative`}
       >
         <button
           onClick={(e) => {
@@ -172,69 +279,113 @@ export default function Home() {
           }}
           className="absolute top-3.5 right-3.5 z-25 w-8 h-8 rounded-full bg-white/85 backdrop-blur-md flex items-center justify-center border border-white/20 hover:scale-105 active:scale-95 transition-all duration-300 shadow-sm hover:shadow group/heart cursor-pointer"
         >
-          <Heart 
-            className={`w-4 h-4 transition-all duration-300 ${
-              isLiked 
-                ? 'fill-rose-500 text-rose-500 scale-110' 
+          <Heart
+            className={`w-4 h-4 transition-all duration-300 ${isLiked
+                ? 'fill-rose-500 text-rose-500 scale-110'
                 : 'text-slate-600 group-hover/heart:text-rose-500'
-            }`} 
+              }`}
           />
+        </button>
+
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            setQuickViewProductId(prod.id);
+          }}
+          className="absolute right-12 top-3.5 z-30 flex h-8 items-center gap-1.5 rounded-full bg-slate-950/90 px-2.5 text-[9px] font-black uppercase tracking-wider text-white opacity-100 shadow-lg transition-all duration-300 hover:bg-brand-orange md:opacity-0 md:group-hover:opacity-100"
+          aria-label={`Quick view ${prod.name || 'product'}`}
+        >
+          <Eye className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Quick View</span>
         </button>
 
         <Link href={`/product/${prod.id}`} className="flex flex-col flex-1">
           <div className="relative aspect-square overflow-hidden bg-slate-50 flex items-center justify-center">
             <div className="absolute top-3.5 left-3.5 z-20 flex flex-col gap-1.5 items-start">
-              <span className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 rounded-md shadow-sm">
-                {prod.tag}
-              </span>
-              <span className="px-2 py-0.5 text-[9px] font-bold bg-rose-500 text-white rounded-md shadow-sm">
-                {prod.discount} OFF
-              </span>
+              {savingAmount !== null && (
+                <span className="px-2 py-0.5 text-[9px] font-bold bg-rose-500 text-white rounded-md shadow-sm">
+                  BDT {savingAmount} OFF
+                </span>
+              )}
             </div>
 
-            <div className="absolute top-3.5 right-12 z-20 bg-white/70 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 shadow-xs border border-white/20">
-              <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-              <span className="text-[10px] font-black text-slate-800">{prod.rating}</span>
-            </div>
+            {prod.stock_status === 'out_of_stock' && (
+              <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-30 pointer-events-none">
+                <span className="px-4 py-2 text-xs font-black uppercase tracking-wider bg-rose-600/90 text-white rounded-xl shadow-lg border border-rose-500/25">
+                  Out of Stock
+                </span>
+              </div>
+            )}
 
-            <img
-              src={resolveImageUrl(prod.image)}
-              alt={prod.name}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            {primaryImage && (
+              <img
+                src={resolveImageUrl(primaryImage)}
+                alt={prod.name || 'Product'}
+                className={`w-full h-full object-contain p-2 transition-all duration-500 group-hover:scale-[1.03] ${hoverImage ? 'group-hover:opacity-0' : ''} ${prod.stock_status === 'out_of_stock' ? 'opacity-50' : ''}`}
+              />
+            )}
+            {hoverImage && (
+              <img
+                src={resolveImageUrl(hoverImage)}
+                alt={prod.name ? `${prod.name} alternate view` : 'Product alternate view'}
+                className={`absolute inset-0 w-full h-full object-contain p-2 opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-[1.03] ${prod.stock_status === 'out_of_stock' ? 'opacity-50' : ''}`}
+              />
+            )}
 
             <div className="absolute inset-0 bg-black/10 group-hover:bg-black/25 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center p-4 z-20">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  handleQuickAddToCart(prod);
+                  if (prod.stock_status === 'out_of_stock') return;
+                  if (hasVariants) {
+                    router.push(`/product/${prod.id}`);
+                  } else {
+                    handleQuickAddToCart({
+                      ...prod,
+                      price: displayedPrice ?? 0,
+                      image: primaryImage ? resolveImageUrl(primaryImage) : ''
+                    });
+                  }
                 }}
-                className="w-full py-2.5 bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg translate-y-4 group-hover:translate-y-0 transition-all duration-500 cursor-pointer"
+                disabled={prod.stock_status === 'out_of_stock'}
+                className={`w-full py-2.5 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg translate-y-4 group-hover:translate-y-0 transition-all duration-500 cursor-pointer ${
+                  prod.stock_status === 'out_of_stock'
+                    ? 'bg-slate-400 cursor-not-allowed hover:bg-slate-400'
+                    : 'bg-slate-950 hover:bg-amber-500 hover:text-slate-950'
+                }`}
               >
-                Add to Basket
+                {prod.stock_status === 'out_of_stock' ? 'Out of Stock' : hasVariants ? 'Choose Options' : 'Add to Basket'}
               </button>
             </div>
           </div>
 
           <div className="p-4 flex flex-col gap-2 bg-white flex-1 justify-between">
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
-                FABRILIFE PREMIUM
-              </span>
+              {prod.brand?.name && (
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
+                  {prod.brand.name}
+                </span>
+              )}
               <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-500 transition-colors duration-300 line-clamp-1">
                 {prod.name}
               </h3>
             </div>
 
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-sm font-black text-slate-950">
-                BDT {prod.price}
-              </span>
-              <span className="text-[11px] font-bold text-slate-400 line-through">
-                BDT {prod.originalPrice}
-              </span>
-            </div>
+            {displayedPrice !== null && (
+              <div className="flex items-baseline gap-2 mt-1">
+                {hasDiscount && regularPrice !== null && (
+                  <span className="text-[11px] font-bold text-slate-400 line-through">
+                    BDT {regularPrice}
+                  </span>
+                )}
+                <span className="text-sm font-black text-slate-950">
+                  BDT {displayedPrice}
+                </span>
+              </div>
+            )}
           </div>
         </Link>
       </div>
@@ -277,39 +428,11 @@ export default function Home() {
 
   return (
     <>
-      {hasActiveSearch ? (
-        <div className="flex flex-col gap-6">
-          <div className="bg-slate-900 text-white rounded-2xl p-6 flex flex-col gap-2">
-            <span className="text-[10px] font-black tracking-widest text-amber-500 uppercase">
-              Search Results
-            </span>
-            <h2 className="text-xl md:text-2xl font-black tracking-tight">
-              Found {totalSearchMatches} matching products for &quot;{searchQuery}&quot;
-            </h2>
-          </div>
-
-          {totalSearchMatches === 0 ? (
-            <div className="w-full bg-white rounded-2xl border border-slate-100 p-12 text-center flex flex-col items-center gap-4 shadow-sm">
-              <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-350">
-                <Search className="w-8 h-8 text-slate-400" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">No products found</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-[280px] mx-auto leading-relaxed">
-                  We couldn&apos;t find any items matching &quot;{searchQuery}&quot;. Check the spelling or try a different term!
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-4">
-              {[...filteredTshirts, ...filteredShuffled1, ...filteredShuffled2, ...filteredShuffled3]
-                .filter((prod, index, self) => self.findIndex(p => p.id === prod.id) === index)
-                .map((prod, idx) => renderProductCard(prod, idx))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
+      <ProductQuickView
+        productId={quickViewProductId}
+        onClose={() => setQuickViewProductId(null)}
+      />
+      <>
           {/* Gorgeous Premium Hero Slider */}
           <section className="relative w-full aspect-[2.6/1] md:aspect-[3/1] rounded-2xl overflow-hidden shadow-2xl bg-slate-900 group">
             {isSlidersLoading ? (
@@ -334,16 +457,14 @@ export default function Home() {
                         href={slide.url || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${
-                          isActive ? "opacity-100 scale-100 z-10" : "opacity-0 scale-[1.03] z-0 pointer-events-none"
-                        }`}
+                        className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${isActive ? "opacity-100 scale-100 z-10" : "opacity-0 scale-[1.03] z-0 pointer-events-none"
+                          }`}
                       >
                         <img
                           src={resolveImageUrl(slide.image)}
                           alt={`Promo Slide ${idx + 1}`}
-                          className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${
-                            isActive ? "scale-100" : "scale-105"
-                          }`}
+                          className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${isActive ? "scale-100" : "scale-105"
+                            }`}
                         />
                       </a>
                     );
@@ -370,9 +491,8 @@ export default function Home() {
                         <button
                           key={idx}
                           onClick={() => setCurrentSlide(idx)}
-                          className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${
-                            idx === currentSlide ? "w-8 bg-amber-500" : "w-2.5 bg-white/50"
-                          }`}
+                          className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${idx === currentSlide ? "w-8 bg-amber-500" : "w-2.5 bg-white/50"
+                            }`}
                         />
                       ))}
                     </div>
@@ -398,30 +518,96 @@ export default function Home() {
               className="w-full overflow-x-auto flex gap-6 py-2 scroll-smooth snap-x snap-mandatory no-scrollbar"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {[...TOP_CATEGORIES, ...TOP_CATEGORIES, ...TOP_CATEGORIES].map((cat, idx) => (
-                <div
+              {featuredSubCategories.map((cat, idx) => (
+                <Link
                   key={idx}
-                  className="w-[140px] md:w-[170px] shrink-0 aspect-[4/5] rounded-2xl overflow-hidden relative shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 snap-start group border border-slate-100 cursor-pointer"
+                  href={`/shop?category=${(cat.name || '').toLowerCase()}`}
+                  className="w-[140px] md:w-[170px] shrink-0 aspect-[4/5] rounded-2xl overflow-hidden relative shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 snap-start group border border-slate-100 cursor-pointer block"
                 >
                   <img
-                    src={resolveImageUrl(cat.image)}
+                    src={resolveImageUrl(cat.featured_image || cat.banner || '')}
                     alt={cat.name}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex flex-col justify-end p-4">
                     <span className="text-[8px] font-black uppercase tracking-wider text-amber-400">
-                      {cat.count}
+                      {cat.products_count ?? 0} Items
                     </span>
                     <h4 className="text-xs md:text-sm font-black text-white leading-tight uppercase tracking-wide group-hover:text-amber-500 transition-colors">
                       {cat.name}
                     </h4>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </section>
 
+          {/* Dynamic Home Sub-Categories Sections */}
+          {homeSubCategories.map(homeCat => {
+            const categoryProducts = productsForSubCategory(homeCat);
+
+            return (
+            <section key={homeCat.id} className="flex flex-col gap-6 w-full mt-6">
+              <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">
+                    {homeCat.category?.name || homeCat.item?.name || 'Premium Apparel'}
+                  </span>
+                  <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    {homeCat.home_page_title || homeCat.name}
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+                  </h2>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById(`home-slider-${homeCat.id}`);
+                      if (el) el.scrollBy({ left: -340, behavior: 'smooth' });
+                    }}
+                    className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById(`home-slider-${homeCat.id}`);
+                      if (el) el.scrollBy({ left: 340, behavior: 'smooth' });
+                    }}
+                    className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div
+                id={`home-slider-${homeCat.id}`}
+                className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {isProductsLoading ? (
+                  Array.from({ length: 4 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="min-w-[240px] md:min-w-[270px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse snap-start"
+                    />
+                  ))
+                ) : categoryProducts.length > 0 ? (
+                  categoryProducts.map((product, idx) => renderProductCard(product, idx, true))
+                ) : (
+                  <div className="w-full flex items-center justify-center py-8">
+                    <span className="text-sm text-slate-400 font-semibold">No products available.</span>
+                  </div>
+                )}
+              </div>
+            </section>
+            );
+          })}
+
+          {/* ========= STATIC PRODUCT SECTIONS (Commented Out) =========
           {/* Premium Apparel Section: T-Shirts */}
+          {/*
           <section id="men-section" className="flex flex-col gap-6 w-full mt-6">
             <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
               <div className="flex flex-col gap-1.5">
@@ -433,171 +619,75 @@ export default function Home() {
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
                 </h2>
               </div>
-
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('product-slider-1');
-                    if (el) el.scrollBy({ left: -340, behavior: 'smooth' });
-                  }}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('product-slider-1');
-                    if (el) el.scrollBy({ left: 340, behavior: 'smooth' });
-                  }}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+                <button onClick={() => { const el = document.getElementById('product-slider-1'); if (el) el.scrollBy({ left: -340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronLeft className="w-5 h-5" /></button>
+                <button onClick={() => { const el = document.getElementById('product-slider-1'); if (el) el.scrollBy({ left: 340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronRight className="w-5 h-5" /></button>
               </div>
             </div>
-
-            <div
-              id="product-slider-1"
-              className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
+            <div id="product-slider-1" className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {filteredTshirts.map((prod, idx) => renderProductCard(prod, idx))}
             </div>
           </section>
+          */}
 
           {/* Polo Shirts Section */}
+          {/*
           <section id="women-section" className="flex flex-col gap-6 w-full mt-6">
             <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
               <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">
-                  Premium Apparel
-                </span>
-                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  FEATURED POLO SHIRTS
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                </h2>
+                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">Premium Apparel</span>
+                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">FEATURED POLO SHIRTS<span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" /></h2>
               </div>
-
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('product-slider-2');
-                    if (el) el.scrollBy({ left: -340, behavior: 'smooth' });
-                  }}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('product-slider-2');
-                    if (el) el.scrollBy({ left: 340, behavior: 'smooth' });
-                  }}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+                <button onClick={() => { const el = document.getElementById('product-slider-2'); if (el) el.scrollBy({ left: -340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronLeft className="w-5 h-5" /></button>
+                <button onClick={() => { const el = document.getElementById('product-slider-2'); if (el) el.scrollBy({ left: 340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronRight className="w-5 h-5" /></button>
               </div>
             </div>
-
-            <div
-              id="product-slider-2"
-              className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
+            <div id="product-slider-2" className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {filteredShuffled1.map((prod, idx) => renderProductCard(prod, idx))}
             </div>
           </section>
+          */}
 
           {/* Casual Shirts Section */}
+          {/*
           <section id="teens-section" className="flex flex-col gap-6 w-full mt-6">
             <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
               <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">
-                  Premium Apparel
-                </span>
-                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  CASUAL SHIRTS & FITS
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                </h2>
+                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">Premium Apparel</span>
+                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">CASUAL SHIRTS & FITS<span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" /></h2>
               </div>
-
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('product-slider-3');
-                    if (el) el.scrollBy({ left: -340, behavior: 'smooth' });
-                  }}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('product-slider-3');
-                    if (el) el.scrollBy({ left: 340, behavior: 'smooth' });
-                  }}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+                <button onClick={() => { const el = document.getElementById('product-slider-3'); if (el) el.scrollBy({ left: -340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronLeft className="w-5 h-5" /></button>
+                <button onClick={() => { const el = document.getElementById('product-slider-3'); if (el) el.scrollBy({ left: 340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronRight className="w-5 h-5" /></button>
               </div>
             </div>
-
-            <div
-              id="product-slider-3"
-              className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
+            <div id="product-slider-3" className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {filteredShuffled2.map((prod, idx) => renderProductCard(prod, idx))}
             </div>
           </section>
+          */}
 
-          {/* Premium Bottoms / Chinos Section */}
+          {/* Premium Chino Pants Section */}
+          {/*
           <section id="kids-section" className="flex flex-col gap-6 w-full mt-6">
             <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
               <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">
-                  Premium Apparel
-                </span>
-                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  PREMIUM CHINO PANTS
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                </h2>
+                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">Premium Apparel</span>
+                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">PREMIUM CHINO PANTS<span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" /></h2>
               </div>
-
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('product-slider-4');
-                    if (el) el.scrollBy({ left: -340, behavior: 'smooth' });
-                  }}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('product-slider-4');
-                    if (el) el.scrollBy({ left: 340, behavior: 'smooth' });
-                  }}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+                <button onClick={() => { const el = document.getElementById('product-slider-4'); if (el) el.scrollBy({ left: -340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronLeft className="w-5 h-5" /></button>
+                <button onClick={() => { const el = document.getElementById('product-slider-4'); if (el) el.scrollBy({ left: 340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronRight className="w-5 h-5" /></button>
               </div>
             </div>
-
-            <div
-              id="product-slider-4"
-              className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
+            <div id="product-slider-4" className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {filteredShuffled3.map((prod, idx) => renderProductCard(prod, idx))}
             </div>
           </section>
+          */}
+          {/* ========= END STATIC PRODUCT SECTIONS ========= */}
         </>
-      )}
-    </>
+      </>
   );
 }

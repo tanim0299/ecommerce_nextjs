@@ -17,16 +17,116 @@ import {
   Truck,
   Phone,
   HelpCircle,
-  Smartphone
+  PackageSearch,
+  Smartphone,
+  Menu,
+  ChevronRight,
+  ChevronDown,
+  Mic
 } from 'lucide-react';
 import { useApp } from './context';
-import { PRODUCTS } from './data';
-import { 
-  TSHIRT_PRODUCTS, 
-  TSHIRT_PRODUCTS_SHUFFLED_1, 
-  TSHIRT_PRODUCTS_SHUFFLED_2, 
-  TSHIRT_PRODUCTS_SHUFFLED_3 
-} from "./page";
+
+type WishlistPrice = number | string | null;
+
+interface WishlistProduct {
+  id: number;
+  name?: string;
+  sku?: string;
+  sale_price?: WishlistPrice;
+  regular_price?: WishlistPrice;
+  discount_price?: WishlistPrice;
+  has_variant?: boolean;
+  images?: Array<{ url?: string; type?: string }>;
+  variants?: Array<{ id: number; sku?: string }>;
+  brand?: { name?: string } | null;
+}
+
+const wishlistNumericPrice = (value?: WishlistPrice) => {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatWishlistPrice = (value: number) => new Intl.NumberFormat('en-BD', {
+  maximumFractionDigits: 2,
+}).format(value);
+
+function getDiceSimilarity(str1: string, str2: string): number {
+  if (str1 === str2) return 1.0;
+  if (str1.length < 2 || str2.length < 2) return 0;
+  const getBigrams = (str: string) => {
+    const bigrams = [];
+    for (let i = 0; i < str.length - 1; i++) {
+      bigrams.push(str.substring(i, i + 2));
+    }
+    return bigrams;
+  };
+  const b1 = getBigrams(str1);
+  const b2 = getBigrams(str2);
+  let intersection = 0;
+  const used = new Set<number>();
+  for (let i = 0; i < b1.length; i++) {
+    for (let j = 0; j < b2.length; j++) {
+      if (b1[i] === b2[j] && !used.has(j)) {
+        intersection++;
+        used.add(j);
+        break;
+      }
+    }
+  }
+  return (2.0 * intersection) / (b1.length + b2.length);
+}
+
+function calculateSimilarity(productName: string, query: string): number {
+  const normName = productName.toLowerCase().trim();
+  const normQuery = query.toLowerCase().trim();
+  if (!normName || !normQuery) return 0;
+  if (normName.includes(normQuery)) return 1.0;
+  
+  const queryWords = normQuery.split(/\s+/).filter(Boolean);
+  const nameWords = normName.split(/\s+/).filter(Boolean);
+  if (queryWords.length === 0) return 0;
+  
+  let matchCount = 0;
+  for (const qWord of queryWords) {
+    let found = false;
+    for (const nWord of nameWords) {
+      if (nWord.includes(qWord) || qWord.includes(nWord)) {
+        found = true;
+        break;
+      }
+    }
+    if (found) {
+      matchCount++;
+    } else {
+      let maxWordSim = 0;
+      for (const nWord of nameWords) {
+        const sim = getDiceSimilarity(qWord, nWord);
+        if (sim > maxWordSim) maxWordSim = sim;
+      }
+      matchCount += maxWordSim;
+    }
+  }
+  return matchCount / queryWords.length;
+}
+
+function isProductMatch(product: WishlistProduct, query: string): boolean {
+  const normQuery = query.toLowerCase().trim();
+  if (!normQuery) return false;
+  
+  // 1. Check SKU match
+  if (product.sku && product.sku.toLowerCase().includes(normQuery)) return true;
+  if (product.variants && product.variants.some(v => v.sku && v.sku.toLowerCase().includes(normQuery))) return true;
+  
+  // 2. Check Name similarity (>= 40% similarity)
+  if (product.name) {
+    const similarity = calculateSimilarity(product.name, normQuery);
+    if (similarity >= 0.40) return true;
+  }
+  
+  return false;
+}
+
 
 // Helper lists to render header links
 const NAV_ITEMS = [
@@ -66,6 +166,253 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const [promoCode, setPromoCode] = React.useState('');
   const [discountPercent, setDiscountPercent] = React.useState(0);
   const [isCheckoutSimulated, setIsCheckoutSimulated] = React.useState(false);
+  const [apiItems, setApiItems] = React.useState<any[]>([]);
+  const [apiCategories, setApiCategories] = React.useState<any[]>([]);
+  const [apiSubCategories, setApiSubCategories] = React.useState<any[]>([]);
+  const [apiProducts, setApiProducts] = React.useState<WishlistProduct[]>([]);
+  const [isWishlistProductsLoading, setIsWishlistProductsLoading] = React.useState(true);
+
+  const desktopSearchRef = React.useRef<HTMLDivElement>(null);
+  const mobileSearchRef = React.useRef<HTMLDivElement>(null);
+  const drawerSearchRef = React.useRef<HTMLDivElement>(null);
+
+  const [isListening, setIsListening] = React.useState(false);
+  const [headerAvatar, setHeaderAvatar] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (user) {
+      if (user.avatar) {
+        setHeaderAvatar(resolveImageUrl(user.avatar));
+      } else {
+        setHeaderAvatar(localStorage.getItem('user_avatar'));
+      }
+    } else {
+      setHeaderAvatar(null);
+    }
+  }, [user, resolveImageUrl]);
+
+  const startVoiceSearch = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice search is not supported in this browser. Please use Chrome or Safari.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) {
+        setSearchQuery(transcript);
+        setShowSearchSuggestions(true);
+        handleSearchSubmit(transcript);
+      }
+    };
+
+    recognition.start();
+  };
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
+  const [expandedItems, setExpandedItems] = React.useState<{[key: number]: boolean}>({});
+  const [expandedCategories, setExpandedCategories] = React.useState<{[key: number]: boolean}>({});
+
+  const toggleExpandedItem = (id: number) => {
+    setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        (desktopSearchRef.current && !desktopSearchRef.current.contains(event.target as Node)) &&
+        (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) &&
+        (drawerSearchRef.current && !drawerSearchRef.current.contains(event.target as Node))
+      ) {
+        setShowSearchSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const matchedSuggestions = React.useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return apiProducts.filter(product => isProductMatch(product, searchQuery)).slice(0, 10);
+  }, [apiProducts, searchQuery]);
+
+  const handleSearchSubmit = (query: string) => {
+    if (query.trim()) {
+      setShowSearchSuggestions(false);
+      router.push(`/shop?search=${encodeURIComponent(query.trim())}`);
+    }
+  };
+
+  const renderSearchSuggestions = () => {
+    if (!showSearchSuggestions || !searchQuery.trim()) return null;
+    return (
+      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-150 shadow-[0_20px_50px_rgba(0,0,0,0.12)] rounded-2xl overflow-hidden z-50 max-h-[380px] overflow-y-auto animate-slide-up">
+        <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+          <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Products found ({matchedSuggestions.length})</span>
+          {matchedSuggestions.length > 0 && (
+            <span className="text-[9px] font-semibold text-slate-400">Press Enter to see all</span>
+          )}
+        </div>
+        {matchedSuggestions.length === 0 ? (
+          <div className="px-4 py-6 text-center text-xs font-semibold text-slate-500">
+            No products found matching &quot;{searchQuery}&quot;
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {matchedSuggestions.map((prod) => {
+              const mainImage = prod.images?.[0]?.url || '';
+              const salePrice = wishlistNumericPrice(prod.sale_price) ?? wishlistNumericPrice(prod.discount_price) ?? wishlistNumericPrice(prod.regular_price);
+              const regularPrice = wishlistNumericPrice(prod.regular_price);
+              const hasDiscount = salePrice && regularPrice && regularPrice > salePrice;
+              return (
+                <Link
+                  key={prod.id}
+                  href={`/product/${prod.id}`}
+                  onClick={() => {
+                    setShowSearchSuggestions(false);
+                    setSearchQuery('');
+                  }}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors group"
+                >
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                    <img 
+                      src={mainImage ? resolveImageUrl(mainImage) : '/placeholder.jpg'} 
+                      alt={prod.name || ''} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-slate-900 truncate group-hover:text-brand-orange transition-colors">
+                      {prod.name}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 font-semibold truncate mt-0.5">
+                      SKU: {prod.sku || prod.variants?.[0]?.sku || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    {salePrice !== null && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-xs font-black text-slate-900">BDT {salePrice}</span>
+                        {hasDiscount && (
+                          <span className="text-[9px] font-bold text-slate-400 line-through">BDT {regularPrice}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
+  const toggleExpandedCategory = (id: number) => {
+    setExpandedCategories(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  React.useEffect(() => {
+    const fetchApiItems = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/items`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            // Sort by sl
+            const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
+            setApiItems(sorted);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch items from API:', e);
+      }
+    };
+    const fetchApiCategories = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/categories`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            // Sort by sl
+            const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
+            setApiCategories(sorted);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch categories from API:', e);
+      }
+    };
+    const fetchApiSubCategories = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/sub-categories`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            // Sort by sl
+            const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
+            setApiSubCategories(sorted);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch sub-categories from API:', e);
+      }
+    };
+    const fetchApiProducts = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/products`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            setApiProducts(json.data as WishlistProduct[]);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch wishlist products from API:', e);
+      } finally {
+        setIsWishlistProductsLoading(false);
+      }
+    };
+    fetchApiItems();
+    fetchApiCategories();
+    fetchApiSubCategories();
+    fetchApiProducts();
+  }, []);
+
+  const wishlistProducts = likedProducts
+    .map(likedId => apiProducts.find(product => product.id.toString() === likedId))
+    .filter((product): product is WishlistProduct => Boolean(product));
+
   const handleCategoryClick = (target: string) => {
     setActiveCategory(target);
     router.push(`/shop?category=${target}`);
@@ -87,15 +434,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   };
 
   const handleCheckout = () => {
-    setIsCheckoutSimulated(true);
-    setTimeout(() => {
-      setCart([]);
-      setIsCheckoutSimulated(false);
-      setIsCartOpen(false);
-      setDiscountPercent(0);
-      setPromoCode('');
-      alert('Order placed successfully! Thank you for shopping with Fabrilife.');
-    }, 2500);
+    setIsCartOpen(false);
+    router.push('/checkout');
   };
 
   const renderLogo = (isFooter = false) => {
@@ -147,52 +487,27 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       </div>
 
       {/* Gorgeous Premium Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex flex-col gap-4">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-3 flex flex-col gap-3">
+        {/* First Row: Logo, Search, Actions */}
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-6">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            {renderLogo(false)}
-          </Link>
+          <div className="flex items-center gap-3">
+            {/* Hamburger Button for Mobile */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden flex items-center justify-center text-slate-700 hover:text-brand-orange p-1 transition-colors cursor-pointer"
+              title="Menu"
+            >
+              <Menu className="w-6 h-6 stroke-[1.5]" />
+            </button>
 
-           {/* Mega Menu Navigation */}
-          <nav className="hidden lg:flex items-center gap-8 text-xs font-black uppercase tracking-wider text-slate-800">
-            {NAV_ITEMS.map((nav) => (
-              <div key={nav.name} className="relative group/nav py-2 cursor-pointer">
-                <span 
-                  onClick={() => handleCategoryClick(nav.target)}
-                  className="hover:text-brand-orange transition-colors flex items-center gap-1"
-                >
-                  {nav.name}
-                </span>
-                
-                {/* Mega Dropdown Menu */}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3.5 w-[560px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 p-7 opacity-0 invisible group-hover/nav:opacity-100 group-hover/nav:visible transition-all duration-300 transform scale-95 translate-y-3 group-hover/nav:scale-100 group-hover/nav:translate-y-0 grid grid-cols-3 gap-6 z-50">
-                  {nav.columns.map((col, cIdx) => (
-                    <div key={cIdx} className="flex flex-col gap-4">
-                      <h5 className="font-black text-[10px] text-slate-900 tracking-widest uppercase border-b-2 border-brand-orange/30 pb-1.5 self-start">
-                        {cIdx === 0 ? 'Category' : cIdx === 1 ? 'Collections' : 'Trending'}
-                      </h5>
-                      <div className="flex flex-col gap-2.5">
-                        {col.map((item) => (
-                          <button
-                            key={item}
-                            onClick={() => handleCategoryClick(nav.target)}
-                            className="text-left text-[11px] font-bold text-slate-500 hover:text-brand-orange transition-all duration-300 hover:translate-x-1.5 flex items-center gap-1.5 group/item cursor-pointer"
-                          >
-                            <span className="w-1 h-1 rounded-full bg-slate-350 bg-slate-300 group-hover/item:bg-brand-orange transition-colors" />
-                            {item}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </nav>
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 group">
+              {renderLogo(false)}
+            </Link>
+          </div>
 
           {/* Search bar */}
-          <div className="flex-1 max-w-sm relative hidden md:block">
+          <div className="flex-1 max-w-2xl relative hidden md:block" ref={desktopSearchRef}>
             <div className="relative w-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -203,15 +518,32 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   setSearchQuery(e.target.value);
                   setShowSearchSuggestions(e.target.value.length > 0);
                 }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-4 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearchSubmit(searchQuery);
+                  }
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-10 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
               />
+              <button
+                type="button"
+                onClick={startVoiceSearch}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
+                title="Search by voice"
+              >
+                <Mic className={`w-4 h-4 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
+              </button>
+              {renderSearchSuggestions()}
             </div>
           </div>
 
           {/* Header Action Buttons */}
           <div className="flex items-center gap-5">
             {/* Search Toggle for Mobile */}
-            <button className="md:hidden flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer">
+            <button 
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              className="md:hidden flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer"
+            >
               <Search className="w-5.5 h-5.5 stroke-[1.5]" />
               <span className="text-[9px] font-bold tracking-wide uppercase text-slate-500">Search</span>
             </button>
@@ -231,7 +563,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               href={user ? "/profile" : "/login"}
               className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group text-center"
             >
-              <User className="w-5.5 h-5.5 stroke-[1.5] group-hover:scale-105 transition-transform" />
+              {headerAvatar ? (
+                <div className="w-5.5 h-5.5 rounded-full overflow-hidden border border-slate-200 group-hover:scale-105 transition-transform flex items-center justify-center bg-slate-100 flex-shrink-0">
+                  <img 
+                    src={headerAvatar} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+              ) : (
+                <User className="w-5.5 h-5.5 stroke-[1.5] group-hover:scale-105 transition-transform" />
+              )}
               <span className="text-[9px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">
                 {user ? user.name.split(' ')[0] : 'Profile'}
               </span>
@@ -269,6 +611,103 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <span className="text-[9px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">Bag</span>
             </button>
           </div>
+        </div>
+
+        {/* Mobile Search Row (Toggled) */}
+        {isMobileSearchOpen && (
+          <div className="w-full md:hidden px-2 pb-1 bg-white" ref={mobileSearchRef}>
+            <div className="relative w-full">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search premium apparel..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchSuggestions(e.target.value.length > 0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearchSubmit(searchQuery);
+                  }
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-10 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={startVoiceSearch}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
+                title="Search by voice"
+              >
+                <Mic className={`w-4 h-4 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
+              </button>
+              {renderSearchSuggestions()}
+            </div>
+          </div>
+        )}
+
+        {/* Second Row: Mega Menu Navigation Centered */}
+        <div className="w-full hidden lg:flex justify-center border-t border-slate-100 pt-2">
+          <nav className="flex items-center gap-8 text-xs font-black uppercase tracking-wider text-slate-800">
+            {apiItems
+              .filter((item) => item.is_show_header == 1 || item.is_show_header === true)
+              .map((item) => {
+                const itemCategories = apiCategories.filter(
+                  (cat) => cat.item?.id === item.id && (cat.is_show_header == 1 || cat.is_show_header === true)
+                );
+                return (
+                  <div key={item.id} className="relative group/nav py-1.5 cursor-pointer">
+                    <span 
+                      onClick={() => handleCategoryClick((item.name || '').toLowerCase())}
+                      className="hover:text-brand-orange transition-colors flex items-center gap-1"
+                    >
+                      {item.name}
+                    </span>
+                    
+                    {itemCategories.length > 0 && (
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 p-7 opacity-0 invisible group-hover/nav:opacity-100 group-hover/nav:visible transition-all duration-300 transform scale-95 translate-y-3 group-hover/nav:scale-100 group-hover/nav:translate-y-0 flex gap-8 z-50 min-w-[200px]">
+                        {itemCategories.map((cat) => (
+                          <div key={cat.id} className="flex flex-col gap-4 min-w-[140px]">
+                            <h5 
+                              onClick={() => handleCategoryClick((cat.name || '').toLowerCase())}
+                              className="font-black text-[10px] text-slate-900 tracking-widest uppercase border-b-2 border-brand-orange/30 pb-1.5 self-start hover:text-brand-orange transition-colors"
+                            >
+                              {cat.name}
+                            </h5>
+                            <div className="flex flex-col gap-2.5">
+                              {apiSubCategories
+                                .filter((sub) => sub.category?.id === cat.id && sub.item?.id === item.id && (sub.is_show_header == 1 || sub.is_show_header === true))
+                                .sort((a, b) => (a.sl || 0) - (b.sl || 0))
+                                .map((sub: any) => (
+                                  <button
+                                    key={sub.id}
+                                    onClick={() => handleCategoryClick((sub.name || '').toLowerCase())}
+                                    className="text-left text-[11px] font-bold text-slate-500 hover:text-brand-orange transition-all duration-300 hover:translate-x-1.5 flex items-center gap-1.5 group/item cursor-pointer"
+                                  >
+                                    <span className="w-1 h-1 rounded-full bg-slate-300 group-hover/item:bg-brand-orange transition-colors" />
+                                    {sub.name}
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            <Link
+              href="/track-order"
+              aria-current={pathname === '/track-order' ? 'page' : undefined}
+              className={`flex items-center gap-1.5 py-1.5 transition-colors ${
+                pathname === '/track-order' ? 'text-brand-orange' : 'hover:text-brand-orange'
+              }`}
+            >
+              <PackageSearch className="h-3.5 w-3.5" />
+              Track Order
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -325,14 +764,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               Customer Policies
             </h4>
             <div className="flex flex-col gap-2.5 font-medium pl-3">
-              {['7-Day Free Exchange', 'Cash On Delivery terms', 'Refund & Returns Policy', 'Track Your Order', 'Help Center'].map((item) => (
-                <button
-                  key={item}
-                  className="text-left hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
-                >
+              {['7-Day Free Exchange', 'Cash On Delivery terms', 'Refund & Returns Policy'].map((item) => (
+                <button key={item} className="text-left hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
                   {item}
                 </button>
               ))}
+              <Link href="/track-order" className="hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300">
+                Track Your Order
+              </Link>
+              <button className="text-left hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
+                Help Center
+              </button>
             </div>
           </div>
 
@@ -451,7 +893,20 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
           {/* Wishlist Items List */}
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-            {likedProducts.length === 0 ? (
+            {isWishlistProductsLoading && likedProducts.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {Array.from({ length: Math.min(likedProducts.length, 4) }).map((_, index) => (
+                  <div key={index} className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                    <div className="h-20 w-16 animate-pulse rounded-lg bg-slate-200" />
+                    <div className="flex flex-1 flex-col gap-2 py-1">
+                      <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200" />
+                      <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200" />
+                      <div className="mt-auto h-3 w-20 animate-pulse rounded bg-slate-200" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : likedProducts.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 py-12">
                 <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-350">
                   <Heart className="w-8 h-8 text-slate-350" />
@@ -470,44 +925,78 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 </button>
               </div>
             ) : (
-              likedProducts.map((likedId) => {
-                const prod = [...TSHIRT_PRODUCTS, ...TSHIRT_PRODUCTS_SHUFFLED_1, ...TSHIRT_PRODUCTS_SHUFFLED_2, ...TSHIRT_PRODUCTS_SHUFFLED_3].find(
-                  (p) => p.id.toString() === likedId
-                );
-                if (!prod) return null;
+              wishlistProducts.map((prod) => {
+                const likedId = prod.id.toString();
+                const galleryImages = (prod.images ?? [])
+                  .filter(image => image.type?.toLocaleLowerCase() === 'gallery' && image.url)
+                  .map(image => image.url as string);
+                const image = galleryImages[0] || prod.images?.find(item => item.url)?.url || '';
+                const salePrice = wishlistNumericPrice(prod.sale_price)
+                  ?? wishlistNumericPrice(prod.discount_price)
+                  ?? wishlistNumericPrice(prod.regular_price);
+                const regularPrice = wishlistNumericPrice(prod.regular_price);
+                const hasDiscount = salePrice !== null && regularPrice !== null && regularPrice > salePrice;
+                const hasVariants = Boolean(prod.has_variant || (prod.variants?.length ?? 0) > 0);
 
                 return (
                   <div key={likedId} className="flex gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-300 items-center">
                     {/* Thumbnail */}
-                    <div className="w-16 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200/60">
-                      <img
-                        src={resolveImageUrl(prod.image)}
-                        alt={prod.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <Link
+                      href={`/product/${prod.id}`}
+                      onClick={() => setIsWishlistOpen(false)}
+                      className="w-16 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200/60"
+                    >
+                      {image && (
+                        <img
+                          src={resolveImageUrl(image)}
+                          alt={prod.name || 'Product'}
+                          className="w-full h-full object-contain p-1"
+                        />
+                      )}
+                    </Link>
 
                     {/* Info details */}
                     <div className="flex-1 flex flex-col gap-1">
-                      <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">
+                      {prod.brand?.name && (
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">{prod.brand.name}</span>
+                      )}
+                      <Link
+                        href={`/product/${prod.id}`}
+                        onClick={() => setIsWishlistOpen(false)}
+                        className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug hover:text-brand-orange"
+                      >
                         {prod.name}
-                      </h4>
-                      <span className="text-xs font-black text-slate-900 mt-1">
-                        BDT {prod.price}
-                      </span>
+                      </Link>
+                      {salePrice !== null && (
+                        <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
+                          {hasDiscount && regularPrice !== null && (
+                            <span className="text-[9px] font-bold text-slate-400 line-through">BDT {formatWishlistPrice(regularPrice)}</span>
+                          )}
+                          <span className="text-xs font-black text-slate-900">BDT {formatWishlistPrice(salePrice)}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2">
                       <button
                         onClick={() => {
-                          handleQuickAddToCart(prod);
-                          handleToggleWishlist(likedId);
-                          setIsWishlistOpen(false);
+                          if (hasVariants) {
+                            setIsWishlistOpen(false);
+                            router.push(`/product/${prod.id}`);
+                          } else {
+                            handleQuickAddToCart({
+                              ...prod,
+                              price: salePrice ?? 0,
+                              image: image ? resolveImageUrl(image) : '',
+                            });
+                            handleToggleWishlist(likedId);
+                            setIsWishlistOpen(false);
+                          }
                         }}
                         className="bg-brand-orange hover:bg-orange-600 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg shadow-sm hover:shadow transition-all duration-300 cursor-pointer whitespace-nowrap"
                       >
-                        ADD TO BAG
+                        {hasVariants ? 'CHOOSE OPTIONS' : 'ADD TO BAG'}
                       </button>
                       <button
                         onClick={() => handleToggleWishlist(likedId)}
@@ -727,6 +1216,175 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               </button>
             </div>
           )}
+        </div>
+      </div>
+      {/* Mobile Off-Canvas Menu Drawer (Left Side) */}
+      <div className={`fixed inset-0 z-50 transition-all duration-300 ${isMobileMenuOpen ? 'visible' : 'invisible delay-300'}`}>
+        {/* Backdrop overlay */}
+        <div 
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+        
+        {/* Drawer container (slides from left) */}
+        <div className={`absolute top-0 bottom-0 left-0 w-80 max-w-[85vw] bg-white shadow-2xl flex flex-col transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          {/* Drawer Header */}
+          <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-slate-950 text-base tracking-tighter">BELIEVERS</span>
+              <span className="font-light text-slate-500 text-xs tracking-wider uppercase">Menu</span>
+            </div>
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-slate-400 hover:text-slate-950 p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Drawer Body (Scrollable List) */}
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+            {/* Search input for mobile inside drawer */}
+            <div className="relative w-full" ref={drawerSearchRef}>
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search premium apparel..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchSuggestions(e.target.value.length > 0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearchSubmit(searchQuery);
+                    setIsMobileMenuOpen(false);
+                  }
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-10 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
+              />
+              <button
+                type="button"
+                onClick={startVoiceSearch}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
+                title="Search by voice"
+              >
+                <Mic className={`w-4 h-4 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
+              </button>
+              {renderSearchSuggestions()}
+            </div>
+
+            {/* Menu Items Accordion */}
+            <div className="flex flex-col gap-2.5 mt-2">
+              <Link
+                href="/track-order"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
+                  pathname === '/track-order'
+                    ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                }`}
+              >
+                <PackageSearch className="h-5 w-5" />
+                Track Order
+              </Link>
+              {apiItems
+                .filter((item) => item.is_show_header == 1 || item.is_show_header === true)
+                .map((item) => {
+                  const itemCategories = apiCategories.filter(
+                    (cat) => cat.item?.id === item.id && (cat.is_show_header == 1 || cat.is_show_header === true)
+                  );
+                  const isItemExpanded = expandedItems[item.id] || false;
+
+                  return (
+                    <div key={item.id} className="border-b border-slate-100 pb-2.5">
+                      {/* Item Header */}
+                      <div className="flex justify-between items-center py-1.5">
+                        <button
+                          onClick={() => {
+                            handleCategoryClick((item.name || '').toLowerCase());
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="text-left font-black text-sm text-slate-800 hover:text-brand-orange uppercase tracking-wide cursor-pointer flex-1"
+                        >
+                          {item.name}
+                        </button>
+                        {itemCategories.length > 0 && (
+                          <button
+                            onClick={() => toggleExpandedItem(item.id)}
+                            className="p-1 hover:bg-slate-50 rounded transition-colors text-slate-400 hover:text-slate-800 cursor-pointer"
+                          >
+                            {isItemExpanded ? (
+                              <ChevronDown className="w-4 h-4 stroke-[2]" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 stroke-[2]" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Categories (Accordion item content) */}
+                      {isItemExpanded && itemCategories.length > 0 && (
+                        <div className="pl-3 mt-1.5 flex flex-col gap-2 border-l border-slate-200">
+                          {itemCategories.map((cat) => {
+                            const catSubCategories = apiSubCategories.filter(
+                              (sub) => sub.category?.id === cat.id && sub.item?.id === item.id && (sub.is_show_header == 1 || sub.is_show_header === true)
+                            ).sort((a, b) => (a.sl || 0) - (b.sl || 0));
+                            const isCatExpanded = expandedCategories[cat.id] || false;
+
+                            return (
+                              <div key={cat.id} className="flex flex-col">
+                                <div className="flex justify-between items-center py-1">
+                                  <button
+                                    onClick={() => {
+                                      handleCategoryClick((cat.name || '').toLowerCase());
+                                      setIsMobileMenuOpen(false);
+                                    }}
+                                    className="text-left font-bold text-xs text-slate-600 hover:text-brand-orange uppercase tracking-wide cursor-pointer flex-1"
+                                  >
+                                    {cat.name}
+                                  </button>
+                                  {catSubCategories.length > 0 && (
+                                    <button
+                                      onClick={() => toggleExpandedCategory(cat.id)}
+                                      className="p-1 hover:bg-slate-50 rounded transition-colors text-slate-400 hover:text-slate-700 cursor-pointer"
+                                    >
+                                      {isCatExpanded ? (
+                                        <ChevronDown className="w-3.5 h-3.5 stroke-[2]" />
+                                      ) : (
+                                        <ChevronRight className="w-3.5 h-3.5 stroke-[2]" />
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Subcategories */}
+                                {isCatExpanded && catSubCategories.length > 0 && (
+                                  <div className="pl-3 mt-1 flex flex-col gap-1.5 border-l border-slate-200">
+                                    {catSubCategories.map((sub) => (
+                                      <button
+                                        key={sub.id}
+                                        onClick={() => {
+                                          handleCategoryClick((sub.name || '').toLowerCase());
+                                          setIsMobileMenuOpen(false);
+                                        }}
+                                        className="text-left font-semibold text-[11px] text-slate-500 hover:text-brand-orange transition-colors py-0.5 cursor-pointer"
+                                      >
+                                        {"• "}{sub.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
