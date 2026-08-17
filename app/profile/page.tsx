@@ -22,7 +22,8 @@ import {
   Edit2,
   Trash2,
   Check,
-  PackageSearch
+  PackageSearch,
+  Copy
 } from 'lucide-react';
 import { useApp } from '../context';
 import SearchableSelect from '../components/SearchableSelect';
@@ -105,6 +106,7 @@ export default function ProfilePage() {
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [selectedOrderDetail, setSelectedOrderDetail] = useState<any | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [copiedOrderNo, setCopiedOrderNo] = useState<string | null>(null);
 
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -290,6 +292,29 @@ export default function ProfilePage() {
       console.error('Failed to fetch order details:', e);
     } finally {
       setIsDetailLoading(false);
+    }
+  };
+
+  const handleCopyOrderNo = async (orderNo: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(orderNo);
+      } else {
+        const copyField = document.createElement('textarea');
+        copyField.value = orderNo;
+        copyField.style.position = 'fixed';
+        copyField.style.opacity = '0';
+        document.body.appendChild(copyField);
+        copyField.select();
+        document.execCommand('copy');
+        copyField.remove();
+      }
+
+      setCopiedOrderNo(orderNo);
+      showToast(`Order ID ${orderNo} copied.`, 'success');
+      window.setTimeout(() => setCopiedOrderNo((current) => current === orderNo ? null : current), 1600);
+    } catch {
+      showToast('Unable to copy the order ID.', 'error');
     }
   };
 
@@ -1314,7 +1339,22 @@ export default function ProfilePage() {
                       <div key={order.id} className="bg-slate-50 border border-slate-100 rounded-xl p-5 flex flex-col gap-3 shadow-sm">
                         <div className="flex flex-wrap justify-between items-center gap-2">
                           <div>
-                            <span className="font-extrabold text-slate-900 text-xs">Order ID: #{order.order_no}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-extrabold text-slate-900 text-xs">Order ID: #{order.order_no}</span>
+                              <button
+                                type="button"
+                                onClick={() => void handleCopyOrderNo(order.order_no)}
+                                aria-label={`Copy order ID ${order.order_no}`}
+                                title={copiedOrderNo === order.order_no ? 'Copied' : 'Copy order ID'}
+                                className={`flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border transition-all ${
+                                  copiedOrderNo === order.order_no
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                                    : 'border-slate-200 bg-white text-slate-400 hover:border-orange-200 hover:text-brand-orange'
+                                }`}
+                              >
+                                {copiedOrderNo === order.order_no ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                              </button>
+                            </div>
                             <span className="block text-[9px] text-slate-400 font-bold uppercase mt-0.5">
                               Placed on {new Date(order.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                             </span>
