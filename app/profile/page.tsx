@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   User, 
   Mail, 
@@ -25,7 +26,7 @@ import {
   PackageSearch,
   Copy
 } from 'lucide-react';
-import { useApp } from '../context';
+import { useApp, UserProfile } from '../context';
 import SearchableSelect from '../components/SearchableSelect';
 
 interface AddressItem {
@@ -46,6 +47,19 @@ interface AddressItem {
   division?: { id: number; country_id: number; name: string; bn_name?: string };
   district?: { id: number; division_id: number; name: string; bn_name?: string };
   upazila?: { id: number; district_id: number; name: string; bn_name?: string };
+}
+
+interface CustomerReviewItem {
+  id: number;
+  product_id: number;
+  product_name: string;
+  product_image: string | null;
+  product_price: number;
+  rating: number;
+  review: string | null;
+  created_at: string;
+  created_at_human: string;
+  created_at_formatted: string;
 }
 
 export default function ProfilePage() {
@@ -107,6 +121,38 @@ export default function ProfilePage() {
   const [selectedOrderDetail, setSelectedOrderDetail] = useState<any | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [copiedOrderNo, setCopiedOrderNo] = useState<string | null>(null);
+  const [reviewHistory, setReviewHistory] = useState<CustomerReviewItem[]>([]);
+  const [isReviewHistoryLoading, setIsReviewHistoryLoading] = useState(false);
+
+  const fetchReviewHistory = useCallback(async () => {
+    if (!token && typeof window !== 'undefined' && !localStorage.getItem('token')) return;
+    try {
+      setIsReviewHistoryLoading(true);
+      const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') : '');
+      const res = await fetch('http://127.0.0.1:8088/api/profile/reviews', {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.status === 'success' && Array.isArray(json.data)) {
+          setReviewHistory(json.data);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching review history:', e);
+    } finally {
+      setIsReviewHistoryLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (activeTab === 'reviews') {
+      fetchReviewHistory();
+    }
+  }, [activeTab, fetchReviewHistory]);
 
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -691,7 +737,14 @@ export default function ProfilePage() {
           const newAvatarUrl = json.image_url;
           setAvatar(newAvatarUrl);
           
-          const updatedUser = { ...user, avatar: newAvatarUrl };
+          const updatedUser: UserProfile = {
+            name: user?.name || '',
+            email: user?.email || '',
+            phone: user?.phone || '',
+            address: user?.address || '',
+            ...user,
+            avatar: newAvatarUrl
+          };
           localStorage.setItem('user', JSON.stringify(updatedUser));
           setUser(updatedUser);
 
@@ -1413,28 +1466,99 @@ export default function ProfilePage() {
             {activeTab === 'reviews' && (
               /* TAB 5: REVIEW HISTORY */
               <div className="flex flex-col gap-6 animate-slide-up">
-                <div>
-                  <h2 className="text-xl font-black text-slate-900">Review History</h2>
-                  <p className="text-xs text-slate-500 font-semibold mt-1">Manage and view your feedback for items purchased.</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">Review History</h2>
+                    <p className="text-xs text-slate-500 font-semibold mt-1">Manage and view your feedback for items purchased.</p>
+                  </div>
+                  {reviewHistory.length > 0 && (
+                    <span className="px-3 py-1 bg-orange-100 text-brand-orange text-xs font-black rounded-full">
+                      {reviewHistory.length} {reviewHistory.length === 1 ? 'Review' : 'Reviews'}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-4 mt-2">
-                  {mockReviews.map((rev) => (
-                    <div key={rev.id} className="bg-slate-50 border border-slate-100 rounded-xl p-5 shadow-sm flex flex-col gap-2.5">
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-xs font-black text-slate-800 truncate">{rev.productName}</h4>
-                        <span className="text-[9px] text-slate-400 font-bold">{rev.date}</span>
-                      </div>
-                      <div className="flex gap-1 text-amber-500">
-                        {Array.from({ length: rev.rating }).map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-600 font-medium italic mt-0.5 leading-normal">
-                        &quot;{rev.comment}&quot;
-                      </p>
+                  {isReviewHistoryLoading ? (
+                    <div className="py-16 text-center text-xs font-bold text-slate-400 animate-pulse">
+                      Loading your review history...
                     </div>
-                  ))}
+                  ) : reviewHistory.length === 0 ? (
+                    <div className="text-center py-16 px-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center justify-center">
+                      <div className="w-14 h-14 rounded-full bg-orange-100 text-brand-orange flex items-center justify-center text-2xl font-black mb-3">
+                        ★
+                      </div>
+                      <h4 className="text-base font-black text-slate-800 mb-1">No Reviews Yet</h4>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto mb-5 font-medium">
+                        You have not reviewed any products yet. Share your experience on items you have purchased!
+                      </p>
+                      <Link
+                        href="/shop"
+                        className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm"
+                      >
+                        Explore Products
+                      </Link>
+                    </div>
+                  ) : (
+                    reviewHistory.map((rev) => (
+                      <div key={rev.id} className="bg-white border border-slate-150 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3.5">
+                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-100 shadow-sm shrink-0 flex items-center justify-center">
+                              {rev.product_image ? (
+                                <img
+                                  src={resolveImageUrl(rev.product_image)}
+                                  alt={rev.product_name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Item</span>
+                              )}
+                            </div>
+                            <div>
+                              <Link
+                                href={`/product/${rev.product_id}`}
+                                className="text-sm font-black text-slate-900 hover:text-brand-orange transition-colors line-clamp-1"
+                              >
+                                {rev.product_name}
+                              </Link>
+                              <span className="text-[11px] text-slate-400 font-medium">
+                                Reviewed {rev.created_at_human || rev.created_at_formatted}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <div className="flex gap-0.5 text-amber-400">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-3.5 h-3.5 ${i < rev.rating ? 'fill-current text-amber-400' : 'text-slate-200'}`}
+                                />
+                              ))}
+                            </div>
+                            <Link
+                              href={`/product/${rev.product_id}`}
+                              className="px-3 py-1 rounded-lg border border-slate-200 hover:border-brand-orange hover:text-brand-orange text-slate-700 text-xs font-bold transition-all bg-slate-50 hover:bg-white"
+                            >
+                              View
+                            </Link>
+                          </div>
+                        </div>
+
+                        {rev.review && (
+                          <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100">
+                            <p className="text-xs text-slate-700 font-medium leading-relaxed italic">
+                              &quot;{rev.review}&quot;
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}

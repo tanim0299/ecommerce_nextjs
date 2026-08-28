@@ -77,6 +77,7 @@ interface Product {
   sub_category?: Relation | null;
   brand?: Relation | null;
   variants?: ProductVariant[];
+  stock_status?: string | null;
 }
 
 interface InferredSelection {
@@ -478,25 +479,25 @@ function ShopCatalogContent() {
 
 
   return (
-    <div className="flex w-full animate-slide-up flex-col gap-6 py-6">
+    <div className="flex w-full animate-slide-up flex-col gap-4 py-3">
       <ProductQuickView
         productId={quickViewProductId}
         onClose={() => setQuickViewProductId(null)}
       />
-      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400">
+      <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-slate-400">
         <Link href="/" className="transition-colors hover:text-slate-800">Home</Link>
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className="h-3 w-3" />
         {item?.name && <span>{item.name}</span>}
         {selectedCategory?.name && (
-          <><ChevronRight className="h-3.5 w-3.5" /><span>{selectedCategory.name}</span></>
+          <><ChevronRight className="h-3 w-3" /><span>{selectedCategory.name}</span></>
         )}
         {selectedSubCategory?.name && (
-          <><ChevronRight className="h-3.5 w-3.5" /><span className="font-black text-slate-900">{selectedSubCategory.name}</span></>
+          <><ChevronRight className="h-3 w-3" /><span className="font-black text-slate-900">{selectedSubCategory.name}</span></>
         )}
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        <aside className="flex flex-col gap-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm lg:sticky lg:top-28 lg:col-span-3">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+        <aside className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-xs lg:sticky lg:top-24 lg:col-span-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-900">
               <SlidersHorizontal className="h-4 w-4 text-brand-orange" />
@@ -762,7 +763,7 @@ function ShopCatalogContent() {
                                   ...product,
                                   price: price ?? 0,
                                   image: primaryImage ? resolveImageUrl(primaryImage) : '',
-                                });
+                                }, event);
                               }
                             }}
                             disabled={product.stock_status === 'out_of_stock'}

@@ -159,7 +159,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     handleUpdateCartQty,
     systemConfig,
     isConfigLoading,
-    resolveImageUrl
+    resolveImageUrl,
+    isBagShaking
   } = useApp();
 
   const [showSearchSuggestions, setShowSearchSuggestions] = React.useState(false);
@@ -169,6 +170,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const [apiItems, setApiItems] = React.useState<any[]>([]);
   const [apiCategories, setApiCategories] = React.useState<any[]>([]);
   const [apiSubCategories, setApiSubCategories] = React.useState<any[]>([]);
+  const [apiPages, setApiPages] = React.useState<any[]>([]);
   const [apiProducts, setApiProducts] = React.useState<WishlistProduct[]>([]);
   const [isWishlistProductsLoading, setIsWishlistProductsLoading] = React.useState(true);
 
@@ -251,6 +253,49 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Dynamically update document title and favicon based on systemConfig and current page
+  React.useEffect(() => {
+    const siteTitle = systemConfig?.title || 'SLOOR';
+    
+    const pageTitles: Record<string, string> = {
+      '/': `${siteTitle} | Affordable Luxury & Style`,
+      '/shop': `Shop Collections | ${siteTitle}`,
+      '/login': `Sign In | ${siteTitle}`,
+      '/signup': `Create Account | ${siteTitle}`,
+      '/checkout': `Secure Checkout | ${siteTitle}`,
+      '/profile': `My Profile | ${siteTitle}`,
+      '/track-order': `Track Order | ${siteTitle}`,
+      '/stores': `Store Outlets | ${siteTitle}`,
+      '/contact': `Contact Us | ${siteTitle}`,
+      '/about': `About Us | ${siteTitle}`,
+      '/privacy-policy': `Privacy Policy | ${siteTitle}`,
+      '/terms': `Terms & Conditions | ${siteTitle}`,
+    };
+
+    let title = pageTitles[pathname];
+    if (!title) {
+      if (pathname.startsWith('/product/')) {
+        title = `Product Details | ${siteTitle}`;
+      } else {
+        const routeName = pathname.replace(/^\//, '').replace(/-/g, ' ');
+        const formattedName = routeName.charAt(0).toUpperCase() + routeName.slice(1);
+        title = `${formattedName} | ${siteTitle}`;
+      }
+    }
+
+    document.title = title;
+
+    if (systemConfig?.favicon) {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = systemConfig.favicon;
+    }
+  }, [pathname, systemConfig]);
 
   const matchedSuggestions = React.useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -403,10 +448,27 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         setIsWishlistProductsLoading(false);
       }
     };
+    const fetchApiPages = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/pages`);
+        if (res.ok) {
+          const json = await res.json();
+          const items = json.result || json.data || [];
+          if (Array.isArray(items)) {
+            setApiPages(items);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch pages from API:', e);
+      }
+    };
     fetchApiItems();
     fetchApiCategories();
     fetchApiSubCategories();
     fetchApiProducts();
+    fetchApiPages();
   }, []);
 
   const wishlistProducts = likedProducts
@@ -441,7 +503,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const renderLogo = (isFooter = false) => {
     if (isConfigLoading || !systemConfig) {
       return (
-        <div className={`h-8 w-28 rounded-md ${isFooter ? 'shimmer-effect' : 'shimmer-effect-light'}`} />
+        <div className={`h-10 sm:h-12 w-32 sm:w-44 rounded-md ${isFooter ? 'shimmer-effect' : 'shimmer-effect-light'}`} />
       );
     }
     if (systemConfig.logo) {
@@ -449,7 +511,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <img 
           src={systemConfig.logo} 
           alt={systemConfig.title} 
-          className="h-9 w-auto object-contain" 
+          className={isFooter 
+            ? "h-12 sm:h-14 md:h-16 w-auto max-w-[240px] md:max-w-[280px] object-contain transition-all" 
+            : "h-10 sm:h-12 md:h-14 lg:h-16 w-auto max-w-[200px] sm:max-w-[260px] md:max-w-[300px] object-contain transition-all"
+          } 
         />
       );
     }
@@ -458,12 +523,12 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     const secondPart = titleParts.slice(1).join(' ') || 'LIFE';
     return (
       <>
-        <svg viewBox="0 0 60 70" className="w-8 h-9 text-brand-orange group-hover:scale-105 transition-transform" fill="currentColor">
+        <svg viewBox="0 0 60 70" className="w-7 h-8 text-brand-orange group-hover:scale-105 transition-transform" fill="currentColor">
           <polygon points="5,38 35,8 45,18 15,48" />
           <polygon points="17,50 35,32 45,42 27,60" />
           <polygon points="29,66 39,56 39,66" />
         </svg>
-        <div className="flex items-baseline text-2xl tracking-tighter">
+        <div className="flex items-baseline text-2xl tracking-tight">
           <span className={`font-extrabold ${isFooter ? 'text-white' : 'text-slate-950'}`}>{firstPart}</span>
           <span className={`font-light ${isFooter ? 'text-slate-300' : 'text-slate-500'}`}>{secondPart}</span>
         </div>
@@ -474,42 +539,42 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Banner Message */}
-      <div className="w-full bg-slate-950 text-white py-2 px-4 text-center text-[10px] font-black uppercase tracking-widest border-b border-slate-900 flex justify-center items-center gap-6">
-        <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5 text-amber-500" /> FREE SHIPPING ON ORDERS OVER BDT 1500!</span>
-        <span className="hidden md:inline text-slate-500">•</span>
+      <div className="w-full bg-slate-950 text-white py-1 px-4 text-center text-[9.5px] font-bold uppercase tracking-wider border-b border-slate-900 flex justify-center items-center gap-4">
+        <span className="flex items-center gap-1"><Truck className="w-3 h-3 text-amber-500" /> FREE SHIPPING ON ORDERS OVER BDT 1500!</span>
+        <span className="hidden md:inline text-slate-600">•</span>
         <span className="hidden md:flex items-center gap-1">
-          <Phone className="w-3.5 h-3.5 text-amber-500" /> HOTLINE: {isConfigLoading || !systemConfig ? (
-            <span className="h-3 w-24 shimmer-effect rounded inline-block" />
+          <Phone className="w-3 h-3 text-amber-500" /> HOTLINE: {isConfigLoading || !systemConfig ? (
+            <span className="h-2.5 w-20 shimmer-effect rounded inline-block" />
           ) : (
             systemConfig.phones[0]
           )}
         </span>
       </div>
 
-      {/* Gorgeous Premium Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-3 flex flex-col gap-3">
+      {/* Gorgeous Compact Header */}
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-150 px-4 sm:px-6 py-2 flex flex-col gap-1.5 shadow-xs">
         {/* First Row: Logo, Search, Actions */}
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
             {/* Hamburger Button for Mobile */}
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="lg:hidden flex items-center justify-center text-slate-700 hover:text-brand-orange p-1 transition-colors cursor-pointer"
               title="Menu"
             >
-              <Menu className="w-6 h-6 stroke-[1.5]" />
+              <Menu className="w-5 h-5 stroke-[1.5]" />
             </button>
 
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href="/" className="flex items-center gap-1.5 group">
               {renderLogo(false)}
             </Link>
           </div>
 
           {/* Search bar */}
-          <div className="flex-1 max-w-2xl relative hidden md:block" ref={desktopSearchRef}>
+          <div className="flex-1 max-w-xl relative hidden md:block" ref={desktopSearchRef}>
             <div className="relative w-full">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search premium apparel..."
@@ -523,29 +588,29 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                     handleSearchSubmit(searchQuery);
                   }
                 }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-10 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
+                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-9 pr-9 py-1.5 text-[11px] font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
               />
               <button
                 type="button"
                 onClick={startVoiceSearch}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
                 title="Search by voice"
               >
-                <Mic className={`w-4 h-4 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
+                <Mic className={`w-3.5 h-3.5 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
               </button>
               {renderSearchSuggestions()}
             </div>
           </div>
 
           {/* Header Action Buttons */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3.5 sm:gap-4">
             {/* Search Toggle for Mobile */}
             <button 
               onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
               className="md:hidden flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer"
             >
-              <Search className="w-5.5 h-5.5 stroke-[1.5]" />
-              <span className="text-[9px] font-bold tracking-wide uppercase text-slate-500">Search</span>
+              <Search className="w-5 h-5 stroke-[1.5]" />
+              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500">Search</span>
             </button>
 
             {/* Outlet Stores */}
@@ -554,8 +619,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               aria-current={pathname === '/stores' ? 'page' : undefined}
               className={`flex flex-col items-center gap-0.5 transition-colors cursor-pointer group ${pathname === '/stores' ? 'text-brand-orange' : 'text-slate-700 hover:text-brand-orange'}`}
             >
-              <MapPin className="w-5.5 h-5.5 stroke-[1.5] group-hover:scale-105 transition-transform" />
-              <span className={`text-[9px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${pathname === '/stores' ? 'text-brand-orange' : 'text-slate-500'}`}>Stores</span>
+              <MapPin className="w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform" />
+              <span className={`text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${pathname === '/stores' ? 'text-brand-orange' : 'text-slate-500'}`}>Stores</span>
             </Link>
 
             {/* Profile */}
@@ -564,7 +629,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group text-center"
             >
               {headerAvatar ? (
-                <div className="w-5.5 h-5.5 rounded-full overflow-hidden border border-slate-200 group-hover:scale-105 transition-transform flex items-center justify-center bg-slate-100 flex-shrink-0">
+                <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-200 group-hover:scale-105 transition-transform flex items-center justify-center bg-slate-100 flex-shrink-0">
                   <img 
                     src={headerAvatar} 
                     alt="Profile" 
@@ -572,9 +637,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   />
                 </div>
               ) : (
-                <User className="w-5.5 h-5.5 stroke-[1.5] group-hover:scale-105 transition-transform" />
+                <User className="w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform" />
               )}
-              <span className="text-[9px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">
+              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">
                 {user ? user.name.split(' ')[0] : 'Profile'}
               </span>
             </Link>
@@ -585,30 +650,39 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group"
             >
               <div className="relative">
-                <Heart className={`w-5.5 h-5.5 stroke-[1.5] group-hover:scale-105 transition-transform ${likedProducts.length > 0 ? 'fill-brand-orange text-brand-orange' : ''}`} />
+                <Heart className={`w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform ${likedProducts.length > 0 ? 'fill-brand-orange text-brand-orange' : ''}`} />
                 {likedProducts.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center">
                     {likedProducts.length}
                   </span>
                 )}
               </div>
-              <span className="text-[9px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">Wishlist</span>
+              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">Wishlist</span>
             </button>
 
             {/* Bag */}
             <button
+              id="header-cart-btn"
               onClick={() => setIsCartOpen(true)}
-              className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group"
+              className={`flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-all cursor-pointer group ${
+                isBagShaking ? 'animate-cart-shake text-brand-orange scale-105' : ''
+              }`}
             >
               <div className="relative">
-                <ShoppingBag className="w-5.5 h-5.5 stroke-[1.5] group-hover:scale-105 transition-transform" />
+                <ShoppingBag className={`w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform ${
+                  isBagShaking ? 'text-brand-orange scale-110' : ''
+                }`} />
                 {cart.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-orange text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center transition-all ${
+                    isBagShaking ? 'animate-bounce ring-2 ring-orange-300' : ''
+                  }`}>
                     {cart.reduce((sum, i) => sum + i.quantity, 0)}
                   </span>
                 )}
               </div>
-              <span className="text-[9px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">Bag</span>
+              <span className={`text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${
+                isBagShaking ? 'text-brand-orange font-black' : 'text-slate-500'
+              }`}>Bag</span>
             </button>
           </div>
         </div>
@@ -631,7 +705,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                     handleSearchSubmit(searchQuery);
                   }
                 }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-10 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
+                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-10 py-1.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
                 autoFocus
               />
               <button
@@ -648,51 +722,86 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         )}
 
         {/* Second Row: Mega Menu Navigation Centered */}
-        <div className="w-full hidden lg:flex justify-center border-t border-slate-100 pt-2">
-          <nav className="flex items-center gap-8 text-xs font-black uppercase tracking-wider text-slate-800">
+        <div className="w-full hidden lg:flex justify-center border-t border-slate-100 pt-1">
+          <nav className="flex items-center gap-6 text-[11px] font-extrabold uppercase tracking-wider text-slate-800">
             {apiItems
               .filter((item) => item.is_show_header == 1 || item.is_show_header === true)
               .map((item) => {
                 const itemCategories = apiCategories.filter(
                   (cat) => cat.item?.id === item.id && (cat.is_show_header == 1 || cat.is_show_header === true)
                 );
+                
+                const hasAnySubCategories = itemCategories.some((cat) =>
+                  apiSubCategories.some(
+                    (sub) =>
+                      sub.category?.id === cat.id &&
+                      sub.item?.id === item.id &&
+                      (sub.is_show_header == 1 || sub.is_show_header === true)
+                  )
+                );
+
                 return (
                   <div key={item.id} className="relative group/nav py-1.5 cursor-pointer">
                     <span 
                       onClick={() => handleCategoryClick((item.name || '').toLowerCase())}
-                      className="hover:text-brand-orange transition-colors flex items-center gap-1"
+                      className="hover:text-brand-orange transition-colors flex items-center gap-1 group-hover/nav:text-brand-orange"
                     >
-                      {item.name}
+                      <span>{item.name}</span>
+                      {itemCategories.length > 0 && (
+                        <ChevronDown className="w-3 h-3 text-slate-400 group-hover/nav:text-brand-orange group-hover/nav:rotate-180 transition-transform duration-300 stroke-[2.5]" />
+                      )}
                     </span>
                     
                     {itemCategories.length > 0 && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 p-7 opacity-0 invisible group-hover/nav:opacity-100 group-hover/nav:visible transition-all duration-300 transform scale-95 translate-y-3 group-hover/nav:scale-100 group-hover/nav:translate-y-0 flex gap-8 z-50 min-w-[200px]">
-                        {itemCategories.map((cat) => (
-                          <div key={cat.id} className="flex flex-col gap-4 min-w-[140px]">
-                            <h5 
+                      !hasAnySubCategories ? (
+                        /* Case 1: Simple Elegant List Dropdown */
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 bg-white/95 backdrop-blur-xl rounded-xl shadow-[0_15px_35px_rgba(0,0,0,0.12)] border border-slate-100/90 py-2 px-1.5 opacity-0 invisible group-hover/nav:opacity-100 group-hover/nav:visible transition-all duration-200 transform scale-95 translate-y-1.5 group-hover/nav:scale-100 group-hover/nav:translate-y-0 flex flex-col min-w-[170px] z-50">
+                          {itemCategories.map((cat) => (
+                            <button
+                              key={cat.id}
                               onClick={() => handleCategoryClick((cat.name || '').toLowerCase())}
-                              className="font-black text-[10px] text-slate-900 tracking-widest uppercase border-b-2 border-brand-orange/30 pb-1.5 self-start hover:text-brand-orange transition-colors"
+                              className="flex items-center justify-between px-3.5 py-2 text-left text-[11px] font-bold text-slate-700 hover:text-brand-orange hover:bg-slate-50/80 rounded-lg transition-all duration-200 cursor-pointer group/cat"
                             >
-                              {cat.name}
-                            </h5>
-                            <div className="flex flex-col gap-2.5">
-                              {apiSubCategories
-                                .filter((sub) => sub.category?.id === cat.id && sub.item?.id === item.id && (sub.is_show_header == 1 || sub.is_show_header === true))
-                                .sort((a, b) => (a.sl || 0) - (b.sl || 0))
-                                .map((sub: any) => (
-                                  <button
-                                    key={sub.id}
-                                    onClick={() => handleCategoryClick((sub.name || '').toLowerCase())}
-                                    className="text-left text-[11px] font-bold text-slate-500 hover:text-brand-orange transition-all duration-300 hover:translate-x-1.5 flex items-center gap-1.5 group/item cursor-pointer"
-                                  >
-                                    <span className="w-1 h-1 rounded-full bg-slate-300 group-hover/item:bg-brand-orange transition-colors" />
-                                    {sub.name}
-                                  </button>
-                                ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                              <span>{cat.name}</span>
+                              <ChevronRight className="w-3 h-3 text-slate-300 group-hover/cat:text-brand-orange group-hover/cat:translate-x-0.5 transition-all" />
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        /* Case 2: Multi-Column Mega Menu */
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 p-6 opacity-0 invisible group-hover/nav:opacity-100 group-hover/nav:visible transition-all duration-300 transform scale-95 translate-y-3 group-hover/nav:scale-100 group-hover/nav:translate-y-0 flex gap-8 z-50 min-w-[200px]">
+                          {itemCategories.map((cat) => {
+                            const catSubCategories = apiSubCategories
+                              .filter((sub) => sub.category?.id === cat.id && sub.item?.id === item.id && (sub.is_show_header == 1 || sub.is_show_header === true))
+                              .sort((a, b) => (a.sl || 0) - (b.sl || 0));
+
+                            return (
+                              <div key={cat.id} className="flex flex-col gap-3 min-w-[130px]">
+                                <h5 
+                                  onClick={() => handleCategoryClick((cat.name || '').toLowerCase())}
+                                  className="font-black text-[10.5px] text-slate-900 tracking-widest uppercase border-b-2 border-brand-orange/30 pb-1.5 self-start hover:text-brand-orange transition-colors cursor-pointer"
+                                >
+                                  {cat.name}
+                                </h5>
+                                {catSubCategories.length > 0 && (
+                                  <div className="flex flex-col gap-2">
+                                    {catSubCategories.map((sub: any) => (
+                                      <button
+                                        key={sub.id}
+                                        onClick={() => handleCategoryClick((sub.name || '').toLowerCase())}
+                                        className="text-left text-[11px] font-bold text-slate-500 hover:text-brand-orange transition-all duration-200 hover:translate-x-1 flex items-center gap-1.5 group/item cursor-pointer"
+                                      >
+                                        <span className="w-1 h-1 rounded-full bg-slate-300 group-hover/item:bg-brand-orange transition-colors" />
+                                        {sub.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )
                     )}
                   </div>
                 );
@@ -712,7 +821,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       </header>
 
       {/* Main Page Content */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 pt-2 pb-6 md:pt-4 md:pb-8 flex flex-col gap-3">
+      <main className={`flex-1 w-full flex flex-col ${pathname === '/' ? 'pb-6 md:pb-8' : 'max-w-7xl mx-auto px-4 pt-2 pb-6 md:pt-4 md:pb-8 gap-3'}`}>
         {children}
       </main>
 
@@ -746,15 +855,28 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             <h4 className="font-black text-white uppercase tracking-wider text-xs border-l-2 border-brand-orange pl-3">
               Shop Collections
             </h4>
-            <div className="flex flex-col gap-2.5 font-medium pl-3">
-              {['Men Wear', 'Women Clothing', 'Teen Collection', 'Kids Playwear', 'Sports Jersey'].map((item) => (
-                <button
-                  key={item}
-                  className="text-left hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
-                >
-                  {item}
-                </button>
-              ))}
+            <div className="flex flex-col gap-2.5 font-medium pl-3 text-xs">
+              {apiItems && apiItems.length > 0 ? (
+                apiItems.slice(0, 5).map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/shop?item=${encodeURIComponent((item.name || '').toLowerCase())}`}
+                    className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+                  >
+                    {item.name}
+                  </Link>
+                ))
+              ) : (
+                ['Sneakers', 'Slides', "Men's Outfit", 'Watches', 'Accessories'].map((item) => (
+                  <Link
+                    key={item}
+                    href={`/shop?item=${encodeURIComponent(item.toLowerCase())}`}
+                    className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+                  >
+                    {item}
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 
@@ -763,18 +885,31 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             <h4 className="font-black text-white uppercase tracking-wider text-xs border-l-2 border-brand-orange pl-3">
               Customer Policies
             </h4>
-            <div className="flex flex-col gap-2.5 font-medium pl-3">
-              {['7-Day Free Exchange', 'Cash On Delivery terms', 'Refund & Returns Policy'].map((item) => (
-                <button key={item} className="text-left hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
-                  {item}
-                </button>
-              ))}
-              <Link href="/track-order" className="hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300">
+            <div className="flex flex-col gap-2.5 font-medium pl-3 text-xs">
+              {apiPages && apiPages.length > 0 ? (
+                apiPages.slice(0, 4).map((p) => (
+                  <Link
+                    key={p.id}
+                    href={`/pages/${p.slug}`}
+                    className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+                  >
+                    {p.title}
+                  </Link>
+                ))
+              ) : (
+                ['7-Day Free Exchange', 'Cash On Delivery terms', 'Refund & Returns Policy'].map((item) => (
+                  <Link
+                    key={item}
+                    href={`/pages/${encodeURIComponent(item.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}`}
+                    className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+                  >
+                    {item}
+                  </Link>
+                ))
+              )}
+              <Link href="/track-order" className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
                 Track Your Order
               </Link>
-              <button className="text-left hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
-                Help Center
-              </button>
             </div>
           </div>
 
@@ -857,6 +992,44 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           </div>
         </div>
       </footer>
+
+      {/* Fixed Floating Cart Button on Right Side */}
+      <button
+        id="floating-cart-btn"
+        type="button"
+        onClick={() => setIsCartOpen(true)}
+        aria-label="Open Shopping Bag"
+        title="Open Shopping Bag"
+        className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center bg-slate-950/95 hover:bg-black text-white py-3.5 px-3 rounded-l-2xl shadow-2xl border-l border-y border-white/15 backdrop-blur-md transition-all duration-300 hover:-translate-x-1.5 hover:shadow-orange-500/20 group cursor-pointer ${
+          isCartOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100'
+        } ${isBagShaking ? 'animate-cart-shake ring-4 ring-brand-orange/60 shadow-[0_0_35px_rgba(249,115,22,0.65)] !bg-slate-900' : ''}`}
+      >
+        {/* Shopping Bag Icon with animated count badge */}
+        <div className="relative mb-1 flex items-center justify-center">
+          <ShoppingBag className={`w-5.5 h-5.5 text-brand-orange group-hover:scale-110 transition-transform duration-200 stroke-[2] ${
+            isBagShaking ? 'scale-125' : ''
+          }`} />
+          {cart.length > 0 && (
+            <span className={`absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-brand-orange text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-slate-950 transition-all ${
+              isBagShaking ? 'animate-bounce ring-orange-300 scale-110' : ''
+            }`}>
+              {cart.reduce((sum, item) => sum + item.quantity, 0)}
+            </span>
+          )}
+        </div>
+
+        {/* Text / Item counter */}
+        <span className={`text-[10px] font-extrabold tracking-wider uppercase leading-tight transition-colors ${
+          isBagShaking ? 'text-brand-orange' : 'text-slate-200 group-hover:text-white'
+        }`}>
+          {cart.reduce((sum, item) => sum + item.quantity, 0)} {cart.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'ITEM' : 'ITEMS'}
+        </span>
+
+        {/* Price Subtotal Pill */}
+        <span className="mt-1.5 px-2 py-0.5 rounded-full bg-brand-orange text-white text-[10px] font-black tracking-tight shadow-xs whitespace-nowrap group-hover:brightness-110 transition-all">
+          ৳{cartSubtotal}
+        </span>
+      </button>
 
       {/* Animated Right-Side Off-Canvas Wishlist Drawer */}
       <div className={`fixed inset-0 z-50 transition-all duration-300 ${isWishlistOpen ? 'visible' : 'invisible delay-300'}`}>
@@ -980,7 +1153,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                     {/* Actions */}
                     <div className="flex flex-col gap-2">
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
                           if (hasVariants) {
                             setIsWishlistOpen(false);
                             router.push(`/product/${prod.id}`);
@@ -989,7 +1162,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                               ...prod,
                               price: salePrice ?? 0,
                               image: image ? resolveImageUrl(image) : '',
-                            });
+                            }, e);
                             handleToggleWishlist(likedId);
                             setIsWishlistOpen(false);
                           }
@@ -1231,8 +1404,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           {/* Drawer Header */}
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-slate-950 text-base tracking-tighter">BELIEVERS</span>
-              <span className="font-light text-slate-500 text-xs tracking-wider uppercase">Menu</span>
+              {systemConfig?.logo ? (
+                <img src={systemConfig.logo} alt={systemConfig.title} className="h-10 w-auto max-w-[170px] object-contain" />
+              ) : (
+                <span className="font-extrabold text-slate-950 text-base tracking-tighter">{systemConfig?.title || 'BELIEVERS'}</span>
+              )}
             </div>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}

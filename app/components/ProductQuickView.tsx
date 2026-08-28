@@ -67,6 +67,21 @@ const formatPrice = (value: number) => new Intl.NumberFormat('en-BD', {
   maximumFractionDigits: 2,
 }).format(value);
 
+const getColorHex = (name: string): string => {
+  const lower = name.toLowerCase().trim();
+  if (lower.includes('blue') || lower.includes('navy') || lower.includes('ocean')) return '#2563eb';
+  if (lower.includes('red') || lower.includes('crimson') || lower.includes('ruby')) return '#dc2626';
+  if (lower.includes('black') || lower.includes('midnight') || lower.includes('space') || lower.includes('dark')) return '#0f172a';
+  if (lower.includes('white') || lower.includes('starlight')) return '#f1f5f9';
+  if (lower.includes('orange') || lower.includes('amber') || lower.includes('desert')) return '#ea580c';
+  if (lower.includes('green') || lower.includes('olive') || lower.includes('emerald')) return '#16a34a';
+  if (lower.includes('purple') || lower.includes('violet')) return '#7c3aed';
+  if (lower.includes('pink') || lower.includes('rose')) return '#db2777';
+  if (lower.includes('gold') || lower.includes('yellow')) return '#eab308';
+  if (lower.includes('silver') || lower.includes('grey') || lower.includes('gray') || lower.includes('titanium')) return '#94a3b8';
+  return '#475569';
+};
+
 export default function ProductQuickView({ productId, onClose }: ProductQuickViewProps) {
   const {
     cart,
@@ -209,7 +224,7 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
     setQuantity(1);
   };
 
-  const addToBasket = () => {
+  const addToBasket = (e?: React.MouseEvent) => {
     if (!product || salePrice === null || selectedCartItem) return;
     handleAddToCart({
       id: cartItemId,
@@ -222,9 +237,8 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
       colorHex: '#111827',
       quantity,
       image: currentImage ? resolveImageUrl(currentImage) : '',
-    });
+    }, e);
     onClose();
-    setIsCartOpen(true);
   };
 
   return (
@@ -267,7 +281,12 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
             <div className="flex min-h-[360px] flex-col bg-slate-50 p-5 md:min-h-[540px]">
               <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-2xl">
                 {currentImage ? (
-                  <img src={resolveImageUrl(currentImage)} alt={product.name || 'Product'} className="h-full w-full object-contain" />
+                  <img
+                    id="quick-view-product-image"
+                    src={resolveImageUrl(currentImage)}
+                    alt={product.name || 'Product'}
+                    className="h-full w-full object-contain"
+                  />
                 ) : (
                   <span className="text-sm font-semibold text-slate-400">No image available</span>
                 )}
@@ -340,40 +359,72 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
                 />
               )}
 
-              {hasVariants && attributeGroups.map(group => (
-                <div key={group.id} className="mt-5">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    Select {group.name}:{' '}
-                    <span className="text-slate-900">
-                      {group.values.find(value => value.id === selectedAttributes[group.id])?.name}
+              {hasVariants && attributeGroups.map(group => {
+                const isColorGroup = group.name.toLowerCase().includes('color');
+                const selectedValueName = group.values.find(value => value.id === selectedAttributes[group.id])?.name;
+
+                return (
+                  <div key={group.id} className="mt-4 flex flex-col gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      {group.name}: <span className="font-extrabold text-slate-900 ml-1">{selectedValueName || 'Choose'}</span>
                     </span>
-                  </span>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {group.values.map(value => {
-                      const isSelected = selectedAttributes[group.id] === value.id;
-                      return (
-                        <button
-                          key={value.id}
-                          type="button"
-                          onClick={() => selectAttribute(group.id, value.id)}
-                          className={`flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-[10px] font-black transition-colors ${
-                            isSelected
-                              ? 'border-brand-orange bg-brand-orange text-white'
-                              : 'border-slate-200 text-slate-600 hover:border-slate-400'
-                          }`}
-                        >
-                          {isSelected && <Check className="h-3 w-3" />}{value.name}
-                        </button>
-                      );
-                    })}
+                    <div className="flex flex-wrap gap-2">
+                      {group.values.map(value => {
+                        const isSelected = selectedAttributes[group.id] === value.id;
+                        const colorHex = isColorGroup ? getColorHex(value.name) : '';
+
+                        if (isColorGroup) {
+                          return (
+                            <button
+                              key={value.id}
+                              type="button"
+                              onClick={() => selectAttribute(group.id, value.id)}
+                              className={`flex min-h-[38px] items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'border-brand-orange bg-orange-50/80 text-brand-orange shadow-xs ring-2 ring-brand-orange/20 scale-[1.02]'
+                                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span
+                                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-black/10 shadow-xs"
+                                style={{ backgroundColor: colorHex }}
+                              >
+                                {isSelected && (
+                                  <Check className="h-2 w-2 stroke-[3] text-white drop-shadow-xs" />
+                                )}
+                              </span>
+                              <span>{value.name}</span>
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={value.id}
+                            type="button"
+                            onClick={() => selectAttribute(group.id, value.id)}
+                            className={`flex min-h-[38px] items-center justify-center rounded-xl border px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-slate-950 bg-slate-950 text-white shadow-sm ring-2 ring-slate-950/10 scale-[1.02]'
+                                : 'border-slate-200/90 bg-slate-50/50 text-slate-700 hover:border-slate-300 hover:bg-white hover:text-slate-900'
+                            }`}
+                          >
+                            {isSelected && (
+                              <span className="mr-1.5 flex h-1.5 w-1.5 rounded-full bg-brand-orange" />
+                            )}
+                            <span>{value.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {hasVariants && attributeGroups.length === 0 && (
-                <div className="mt-5">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Select Option</span>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-4 flex flex-col gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Select Option</span>
+                  <div className="flex flex-wrap gap-2">
                     {variants.map(variant => (
                       <button
                         key={variant.id}
@@ -383,10 +434,10 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
                           setVariantImage(variant.image || '');
                           setQuantity(1);
                         }}
-                        className={`rounded-lg border px-3 py-2 text-[10px] font-black ${
+                        className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
                           selectedVariantId === variant.id
-                            ? 'border-brand-orange bg-brand-orange text-white'
-                            : 'border-slate-200 text-slate-600'
+                            ? 'border-slate-950 bg-slate-950 text-white shadow-sm ring-2 ring-slate-950/10'
+                            : 'border-slate-200/90 bg-slate-50/50 text-slate-700 hover:border-slate-300 hover:bg-white'
                         }`}
                       >
                         {variant.name || variant.sku || `Option ${variant.id}`}

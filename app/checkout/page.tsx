@@ -37,7 +37,7 @@ interface AddressItem {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, setCart, user, token, showToast, resolveImageUrl, handleUpdateCartQty, handleRemoveFromCart } = useApp();
+  const { cart, setCart, user, token, showToast, resolveImageUrl, handleUpdateCartQty, handleRemoveFromCart, systemConfig } = useApp();
 
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -445,8 +445,12 @@ export default function CheckoutPage() {
           {/* Brand Logo & Order Header */}
           <div className="flex justify-between items-start pt-8 pb-6">
             <div>
-              <h2 className="text-lg font-black text-slate-900 tracking-tighter">BELIEVERS</h2>
-              <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Premium Apparel Store</p>
+              {systemConfig?.logo ? (
+                <img src={systemConfig.logo} alt={systemConfig.title || 'Logo'} className="h-10 w-auto max-w-[180px] object-contain" />
+              ) : (
+                <h2 className="text-lg font-black text-slate-900 tracking-tighter">{systemConfig?.title || 'STORE'}</h2>
+              )}
+              <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Online Apparel Store</p>
             </div>
             <div className="text-right">
               <span className="bg-slate-900 text-white text-[9px] font-black tracking-widest px-2.5 py-1 rounded-md uppercase">

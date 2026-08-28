@@ -9,7 +9,7 @@ import CountryCodeSelector, { Country } from '../components/CountryCodeSelector'
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, setUser, setToken, showToast } = useApp();
+  const { user, setUser, setToken, showToast, systemConfig, isConfigLoading } = useApp();
   
   // Tab control: 'password' or 'otp'
   const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
@@ -189,17 +189,21 @@ export default function LoginPage() {
     <div className="w-full py-8 flex flex-col justify-center items-center">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-slide-up">
         {/* Banner header */}
-        <div className="bg-slate-950 p-8 text-center text-white flex flex-col items-center gap-3">
-          <svg viewBox="0 0 60 70" className="w-8 h-9 text-brand-orange" fill="currentColor">
-            <polygon points="5,38 35,8 45,18 15,48" />
-            <polygon points="17,50 35,32 45,42 27,60" />
-            <polygon points="29,66 39,56 39,66" />
-          </svg>
-          <div className="flex items-center gap-1.5 text-xl tracking-tighter">
-            <span className="font-extrabold text-white">FABRI</span>
-            <span className="font-light text-slate-300">LIFE</span>
-          </div>
-          <p className="text-xs text-slate-400 font-medium">Welcome back! Sign in to access your orders and settings.</p>
+        <div className="bg-slate-50 border-b border-slate-100 p-8 text-center text-slate-800 flex flex-col items-center gap-3">
+          {isConfigLoading ? (
+            <div className="h-12 w-36 shimmer-effect-light rounded-lg" />
+          ) : systemConfig?.logo ? (
+            <img 
+              src={systemConfig.logo} 
+              alt={systemConfig.title || 'Logo'} 
+              className="h-12 sm:h-14 w-auto max-w-[220px] object-contain" 
+            />
+          ) : (
+            <div className="flex items-center gap-1.5 text-xl tracking-tighter">
+              <span className="font-extrabold text-slate-900">{systemConfig?.title || 'STORE'}</span>
+            </div>
+          )}
+          <p className="text-xs text-slate-500 font-medium">Welcome back! Sign in to access your orders and settings.</p>
         </div>
 
         {/* Tab Controls */}
