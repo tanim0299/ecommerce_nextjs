@@ -1,5 +1,6 @@
 'use client';
 
+import { getProductUrl, getCategoryUrl, getSubCategoryUrl } from './utils/slug';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,6 +16,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { useApp } from './context';
+import { apiFetch } from './utils/api';
 import ProductQuickView from './components/ProductQuickView';
 import WatchBeforeBuyModal from './components/WatchBeforeBuyModal';
 
@@ -125,25 +127,12 @@ interface FeaturedSubCategory extends ApiRelation {
   products_count?: number;
 }
 
-interface HomeCategory extends ApiRelation {
+interface HomePageSection {
   id: number;
-  sl?: number;
-  banner?: string | null;
-  featured_image?: string | null;
-  is_show_home_page?: boolean;
-  home_page_title?: string;
-  products_count?: number;
-  item?: ApiRelation | null;
-}
-
-interface HomeSubCategory extends ApiRelation {
-  id: number;
-  sl?: number;
-  sub_category_id?: number;
-  sub_category?: ApiRelation | null;
-  category?: ApiRelation | null;
-  item?: ApiRelation | null;
-  home_page_title?: string;
+  title: string;
+  sub_title?: string | null;
+  sl_no?: number;
+  products: ApiProduct[];
 }
 
 interface WatchBeforeBuyVideo {
@@ -208,8 +197,8 @@ export default function Home() {
   const [sliders, setSliders] = useState<SliderItem[]>([]);
   const [isSlidersLoading, setIsSlidersLoading] = useState(true);
   const [featuredSubCategories, setFeaturedSubCategories] = useState<FeaturedSubCategory[]>([]);
-  const [homeCategories, setHomeCategories] = useState<HomeCategory[]>([]);
-  const [homeSubCategories, setHomeSubCategories] = useState<HomeSubCategory[]>([]);
+  const [homePageSections, setHomePageSections] = useState<HomePageSection[]>([]);
+  const [isSectionsLoading, setIsSectionsLoading] = useState(true);
   const [watchVideos, setWatchVideos] = useState<WatchBeforeBuyVideo[]>([]);
   const [activeWatchVideo, setActiveWatchVideo] = useState<WatchBeforeBuyVideo | null>(null);
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -224,13 +213,13 @@ export default function Home() {
     resolveImageUrl
   } = useApp();
 
-  // Fetch dynamic sliders, featured sub categories, and home categories
+  // Fetch dynamic sliders, featured sub categories, and home page sections
   useEffect(() => {
     const fetchSliders = async () => {
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/sliders`);
+        const res = await apiFetch('sliders');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
@@ -247,9 +236,7 @@ export default function Home() {
     };
     const fetchFeaturedSubCategories = async () => {
       try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/featured-sub-categories`);
+        const res = await apiFetch('featured-sub-categories');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
@@ -262,45 +249,28 @@ export default function Home() {
         console.error('Failed to load featured sub categories:', error);
       }
     };
-    const fetchHomeCategories = async () => {
+    const fetchHomePageSections = async () => {
       try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/home-categories`);
+        const res = await apiFetch('home-page-sections');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
-            const sorted = (json.data as HomeCategory[])
-              .sort((a, b) => (a.sl || 0) - (b.sl || 0));
-            setHomeCategories(sorted);
+            const sorted = (json.data as HomePageSection[])
+              .sort((a, b) => (a.sl_no || 0) - (b.sl_no || 0));
+            setHomePageSections(sorted);
           }
         }
       } catch (error) {
-        console.error('Failed to load home categories:', error);
-      }
-    };
-    const fetchHomeSubCategories = async () => {
-      try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/home-sub-categories`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.status === 'success' && Array.isArray(json.data)) {
-            const sorted = (json.data as HomeSubCategory[])
-              .sort((a, b) => (a.sl || 0) - (b.sl || 0));
-            setHomeSubCategories(sorted);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load home sub categories:', error);
+        console.error('Failed to load home page sections:', error);
+      } finally {
+        setIsSectionsLoading(false);
       }
     };
     const fetchWatchVideos = async () => {
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/watch-before-buy`);
+        const res = await apiFetch('watch-before-buy');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
@@ -315,7 +285,7 @@ export default function Home() {
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/products`);
+        const res = await apiFetch('products');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
@@ -331,44 +301,9 @@ export default function Home() {
     fetchSliders();
     fetchWatchVideos();
     fetchFeaturedSubCategories();
-    fetchHomeCategories();
-    fetchHomeSubCategories();
+    fetchHomePageSections();
     fetchProducts();
   }, []);
-
-  const productsForCategory = (homeCat: HomeCategory) => {
-    const categoryId = Number(homeCat.id);
-    const categoryName = normalizeName(homeCat.name);
-
-    return products.filter(product => {
-      const productCategoryId = Number(product.category?.id);
-      const idsMatch = Number.isFinite(categoryId)
-        && Number.isFinite(productCategoryId)
-        && categoryId === productCategoryId;
-      const namesMatch = Boolean(categoryName)
-        && categoryName === normalizeName(product.category?.name);
-
-      return idsMatch || namesMatch;
-    });
-  };
-
-  const productsForSubCategory = (homeCat: HomeSubCategory) => {
-    const subCategoryId = Number(
-      homeCat.sub_category_id ?? homeCat.sub_category?.id ?? homeCat.id
-    );
-    const subCategoryName = normalizeName(homeCat.sub_category?.name ?? homeCat.name);
-
-    return products.filter(product => {
-      const productSubCategoryId = Number(product.sub_category?.id);
-      const idsMatch = Number.isFinite(subCategoryId)
-        && Number.isFinite(productSubCategoryId)
-        && subCategoryId === productSubCategoryId;
-      const namesMatch = Boolean(subCategoryName)
-        && subCategoryName === normalizeName(product.sub_category?.name);
-
-      return idsMatch || namesMatch;
-    });
-  };
 
   const renderProductCard = (prod: ApiProduct, idx: number, isSliderCard = false) => {
     const isLiked = likedProducts.includes(prod.id.toString());
@@ -425,7 +360,7 @@ export default function Home() {
           <span className="hidden sm:inline">Quick View</span>
         </button>
 
-        <Link href={`/product/${prod.id}`} className="flex flex-col flex-1">
+        <Link href={getProductUrl(prod)} className="flex flex-col flex-1">
           <div className="relative aspect-square overflow-hidden bg-slate-50 flex items-center justify-center">
             <div className="absolute top-3.5 left-3.5 z-20 flex flex-col gap-1.5 items-start">
               {savingAmount !== null && (
@@ -465,7 +400,7 @@ export default function Home() {
                   e.preventDefault();
                   if (prod.stock_status === 'out_of_stock') return;
                   if (hasVariants) {
-                    router.push(`/product/${prod.id}`);
+                    router.push(getProductUrl(prod));
                   } else {
                     handleQuickAddToCart({
                       ...prod,
@@ -838,7 +773,7 @@ export default function Home() {
                         </button>
 
                         <Link
-                          href={`/product/${video.product_id}`}
+                          href={getProductUrl(video.product || { id: video.product_id })}
                           onClick={(e) => e.stopPropagation()}
                           className="flex-1 bg-brand-orange hover:bg-orange-600 text-white text-xs font-bold py-2 px-3 rounded-full flex items-center justify-center transition-all hover:scale-102 active:scale-95 cursor-pointer text-center shadow-md shadow-brand-orange/20"
                         >
@@ -872,7 +807,7 @@ export default function Home() {
                 {featuredSubCategories.map((cat, idx) => (
                   <Link
                     key={idx}
-                    href={`/shop?category=${(cat.name || '').toLowerCase()}`}
+                    href={getSubCategoryUrl(cat)}
                     className="w-[125px] md:w-[155px] shrink-0 aspect-[4/5] rounded-xl overflow-hidden relative shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 snap-start group border border-slate-100 cursor-pointer block"
                   >
                     <img
@@ -894,20 +829,25 @@ export default function Home() {
             </section>
           )}
 
-          {/* Dynamic Home Categories Sections (when categories have is_show_home_page = true) */}
-          {homeCategories.map(homeCat => {
-            const categoryProducts = productsForCategory(homeCat);
-            if (categoryProducts.length === 0) return null;
+          {/* Dynamic Custom Home Page Sections from Backend */}
+
+          
+
+          {homePageSections.map(sec => {
+            const sectionProducts = (sec.products || []).filter(p => p.is_active !== false);
+            if (sectionProducts.length === 0) return null;
 
             return (
-              <section key={`cat-${homeCat.id}`} className="flex flex-col gap-3 w-full mt-4">
+              <section key={`sec-${sec.id}`} className="flex flex-col gap-3 w-full mt-4">
                 <div className="flex items-end justify-between border-b border-slate-200/60 pb-2.5">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[9.5px] md:text-[11px] font-black tracking-[0.2em] text-brand-orange uppercase">
-                      {homeCat.item?.name || 'Premium Apparel'}
-                    </span>
+                    {sec.sub_title && (
+                      <span className="text-[9.5px] md:text-[11px] font-black tracking-[0.2em] text-brand-orange uppercase">
+                        {sec.sub_title}
+                      </span>
+                    )}
                     <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                      {homeCat.home_page_title || homeCat.name}
+                      {sec.title}
                       <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
                     </h2>
                   </div>
@@ -915,19 +855,21 @@ export default function Home() {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => {
-                        const el = document.getElementById(`home-cat-slider-${homeCat.id}`);
+                        const el = document.getElementById(`home-sec-slider-${sec.id}`);
                         if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
                       }}
                       className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                      aria-label="Previous items"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => {
-                        const el = document.getElementById(`home-cat-slider-${homeCat.id}`);
+                        const el = document.getElementById(`home-sec-slider-${sec.id}`);
                         if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
                       }}
                       className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                      aria-label="Next items"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -935,90 +877,26 @@ export default function Home() {
                 </div>
 
                 <div
-                  id={`home-cat-slider-${homeCat.id}`}
+                  id={`home-sec-slider-${sec.id}`}
                   className="w-full overflow-x-auto flex gap-3.5 py-2 scroll-smooth snap-x snap-mandatory no-scrollbar"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
-                  {isProductsLoading ? (
+                  {isSectionsLoading ? (
                     Array.from({ length: 4 }).map((_, idx) => (
                       <div
                         key={idx}
                         className="min-w-[210px] md:min-w-[240px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse snap-start"
                       />
                     ))
-                  ) : categoryProducts.length > 0 ? (
-                    categoryProducts.map((product, idx) => renderProductCard(product, idx, true))
+                  ) : sectionProducts.length > 0 ? (
+                    sectionProducts.map((product, idx) => renderProductCard(product, idx, true))
                   ) : (
                     <div className="w-full flex items-center justify-center py-6">
-                      <span className="text-xs text-slate-400 font-semibold">No products available.</span>
+                      <span className="text-xs text-slate-400 font-semibold">No products available in this section.</span>
                     </div>
                   )}
                 </div>
               </section>
-            );
-          })}
-
-          {/* Dynamic Home Sub-Categories Sections */}
-          {homeSubCategories.map(homeCat => {
-            const categoryProducts = productsForSubCategory(homeCat);
-            if (categoryProducts.length === 0) return null;
-
-            return (
-            <section key={`subcat-${homeCat.id}`} className="flex flex-col gap-3 w-full mt-4">
-              <div className="flex items-end justify-between border-b border-slate-200/60 pb-2.5">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[9.5px] md:text-[11px] font-black tracking-[0.2em] text-brand-orange uppercase">
-                    {homeCat.category?.name || homeCat.item?.name || 'Premium Apparel'}
-                  </span>
-                  <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                    {homeCat.home_page_title || homeCat.name}
-                    <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-                  </h2>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById(`home-slider-${homeCat.id}`);
-                      if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
-                    }}
-                    className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById(`home-slider-${homeCat.id}`);
-                      if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
-                    }}
-                    className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div
-                id={`home-slider-${homeCat.id}`}
-                className="w-full overflow-x-auto flex gap-3.5 py-2 scroll-smooth snap-x snap-mandatory no-scrollbar"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              >
-                {isProductsLoading ? (
-                  Array.from({ length: 4 }).map((_, idx) => (
-                    <div
-                      key={idx}
-                      className="min-w-[210px] md:min-w-[240px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse snap-start"
-                    />
-                  ))
-                ) : categoryProducts.length > 0 ? (
-                  categoryProducts.map((product, idx) => renderProductCard(product, idx, true))
-                ) : (
-                  <div className="w-full flex items-center justify-center py-6">
-                    <span className="text-xs text-slate-400 font-semibold">No products available.</span>
-                  </div>
-                )}
-              </div>
-            </section>
             );
           })}
 

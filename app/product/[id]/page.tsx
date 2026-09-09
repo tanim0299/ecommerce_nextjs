@@ -1,5 +1,6 @@
 'use client';
 
+import { getProductUrl, getCategoryUrl, getSubCategoryUrl } from '../../utils/slug';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -26,6 +27,7 @@ import {
   Video as VideoIcon,
 } from 'lucide-react';
 import { useApp } from '../../context';
+import { apiFetch } from '../../utils/api';
 import SafeHtml from '../../components/SafeHtml';
 import ProductReviews from '../../components/ProductReviews';
 import ProductComments from '../../components/ProductComments';
@@ -243,7 +245,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const response = await fetch(`${cleanUrl}/products/${encodeURIComponent(id)}`, {
+        const response = await apiFetch(`products/${encodeURIComponent(id)}`, {
           signal: controller.signal,
         });
 
@@ -572,7 +574,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {product.category?.name && (
             <>
               <ChevronRight className="h-3 w-3 text-slate-300" />
-              <Link href={`/shop?category=${product.category.name.toLowerCase()}`} className="hover:text-brand-orange transition-colors">
+              <Link href={getCategoryUrl(product.category, product.item)} className="hover:text-brand-orange transition-colors">
                 {product.category.name.toUpperCase()}
               </Link>
             </>
@@ -580,7 +582,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {product.sub_category?.name && (
             <>
               <ChevronRight className="h-3 w-3 text-slate-300" />
-              <Link href={`/shop?category=${product.sub_category.name.toLowerCase()}`} className="hover:text-brand-orange transition-colors">
+              <Link href={getSubCategoryUrl(product.sub_category, product.category)} className="hover:text-brand-orange transition-colors">
                 {product.sub_category.name.toUpperCase()}
               </Link>
             </>
@@ -1189,7 +1191,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   key={relProd.id}
                   className="bg-white rounded-xl overflow-hidden border border-slate-100 hover:border-brand-orange/40 shadow-2xs hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col group relative"
                 >
-                  <Link href={`/product/${relProd.id}`} className="relative aspect-square bg-slate-50 overflow-hidden flex items-center justify-center p-3">
+                  <Link href={getProductUrl(relProd)} className="relative aspect-square bg-slate-50 overflow-hidden flex items-center justify-center p-3">
                     {relImage ? (
                       <img
                         src={resolveImageUrl(relImage)}
@@ -1204,7 +1206,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   <div className="p-3 flex flex-col flex-1 justify-between gap-1.5">
                     <div>
                       <span className="text-[8.5px] font-black text-brand-orange uppercase tracking-widest">{relProd.category?.name || 'APPAREL'}</span>
-                      <Link href={`/product/${relProd.id}`} className="block text-xs font-bold text-slate-900 hover:text-brand-orange truncate mt-0.5">
+                      <Link href={getProductUrl(relProd)} className="block text-xs font-bold text-slate-900 hover:text-brand-orange truncate mt-0.5">
                         {relProd.name}
                       </Link>
                     </div>

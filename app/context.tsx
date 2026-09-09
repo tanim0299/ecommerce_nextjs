@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ShoppingBag } from 'lucide-react';
+import { apiFetch, getActiveShopSlug } from './utils/api';
 
 export interface CartItem {
   id: string;
@@ -24,12 +25,26 @@ export interface UserProfile {
 
 export interface SystemConfig {
   title: string;
+  shop_id?: number;
+  shop_slug?: string;
+  shop_subdomain?: string;
   logo: string;
   favicon: string;
+  banner?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  meta_description?: string;
+  social_facebook?: string;
+  social_instagram?: string;
+  social_youtube?: string;
+  social_tiktok?: string;
   phones: string[];
   emails: string[];
+  whatsapp?: string;
   address: string;
   google_map: string;
+  system_type?: string;
+  ecommerce_stock_type?: string;
 }
 
 export interface FlyingItem {
@@ -68,6 +83,7 @@ interface AppContextType {
   handleUpdateCartQty: (itemId: string, qty: number) => void;
   systemConfig: SystemConfig | null;
   isConfigLoading: boolean;
+  activeShopSlug: string;
   resolveImageUrl: (path: string) => string;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   isBagShaking: boolean;
@@ -88,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
   const [isConfigLoading, setIsConfigLoading] = useState(true);
+  const [activeShopSlug, setActiveShopSlug] = useState<string>('');
 
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>>([]);
 
@@ -120,13 +137,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return `${cleanBasePath}${cleanPath}`;
   };
 
-  // Fetch System Configuration
+  // Fetch System Configuration & Tenant info
   useEffect(() => {
     const fetchSystemConfig = async () => {
       try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/system-config`);
+        const slug = getActiveShopSlug();
+        setActiveShopSlug(slug);
+
+        const res = await apiFetch('system-config');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && json.data) {
@@ -134,6 +152,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             
             if (data.logo) data.logo = resolveImageUrl(data.logo);
             if (data.favicon) data.favicon = resolveImageUrl(data.favicon);
+            if (data.banner) data.banner = resolveImageUrl(data.banner);
 
             setSystemConfig(data);
           }
@@ -147,7 +166,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fetchSystemConfig();
   }, []);
 
-  // Update document title and favicon dynamically on client side
+  // Update document title, favicon, and dynamic brand colors
   useEffect(() => {
     if (systemConfig) {
       if (systemConfig.title) {
@@ -161,6 +180,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           document.getElementsByTagName('head')[0].appendChild(link);
         }
         link.href = systemConfig.favicon;
+      }
+      if (systemConfig.primary_color) {
+        document.documentElement.style.setProperty('--brand-color', systemConfig.primary_color);
+        document.documentElement.style.setProperty('--primary-color', systemConfig.primary_color);
+      }
+      if (systemConfig.secondary_color) {
+        document.documentElement.style.setProperty('--secondary-color', systemConfig.secondary_color);
       }
     }
   }, [systemConfig]);
@@ -390,6 +416,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       handleUpdateCartQty,
       systemConfig,
       isConfigLoading,
+      activeShopSlug,
       resolveImageUrl,
       showToast,
       isBagShaking,

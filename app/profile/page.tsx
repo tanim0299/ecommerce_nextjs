@@ -1,5 +1,6 @@
 'use client';
 
+import { getProductUrl } from '../utils/slug';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -1520,7 +1521,7 @@ export default function ProfilePage() {
                             </div>
                             <div>
                               <Link
-                                href={`/product/${rev.product_id}`}
+                                href={getProductUrl({ id: rev.product_id, name: rev.product_name })}
                                 className="text-sm font-black text-slate-900 hover:text-brand-orange transition-colors line-clamp-1"
                               >
                                 {rev.product_name}
@@ -1541,7 +1542,7 @@ export default function ProfilePage() {
                               ))}
                             </div>
                             <Link
-                              href={`/product/${rev.product_id}`}
+                              href={getProductUrl({ id: rev.product_id, name: rev.product_name })}
                               className="px-3 py-1 rounded-lg border border-slate-200 hover:border-brand-orange hover:text-brand-orange text-slate-700 text-xs font-bold transition-all bg-slate-50 hover:bg-white"
                             >
                               View

@@ -1,5 +1,6 @@
 'use client';
 
+import { getProductUrl, getCategoryUrl, getSubCategoryUrl, getItemUrl } from './utils/slug';
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -25,6 +26,7 @@ import {
   Mic
 } from 'lucide-react';
 import { useApp } from './context';
+import { apiFetch } from './utils/api';
 
 type WishlistPrice = number | string | null;
 
@@ -333,7 +335,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               return (
                 <Link
                   key={prod.id}
-                  href={`/product/${prod.id}`}
+                  href={getProductUrl(prod)}
                   onClick={() => {
                     setShowSearchSuggestions(false);
                     setSearchQuery('');
@@ -384,7 +386,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/items`);
+        const res = await apiFetch('items');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
@@ -401,7 +403,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/categories`);
+        const res = await apiFetch('categories');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
@@ -418,7 +420,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/sub-categories`);
+        const res = await apiFetch('sub-categories');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
@@ -435,7 +437,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/products`);
+        const res = await apiFetch('products');
         if (res.ok) {
           const json = await res.json();
           if (json.status === 'success' && Array.isArray(json.data)) {
@@ -452,7 +454,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/pages`);
+        const res = await apiFetch('pages');
         if (res.ok) {
           const json = await res.json();
           const items = json.result || json.data || [];
@@ -1115,7 +1117,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   <div key={likedId} className="flex gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-300 items-center">
                     {/* Thumbnail */}
                     <Link
-                      href={`/product/${prod.id}`}
+                      href={getProductUrl(prod)}
                       onClick={() => setIsWishlistOpen(false)}
                       className="w-16 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200/60"
                     >
@@ -1134,7 +1136,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                         <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">{prod.brand.name}</span>
                       )}
                       <Link
-                        href={`/product/${prod.id}`}
+                        href={getProductUrl(prod)}
                         onClick={() => setIsWishlistOpen(false)}
                         className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug hover:text-brand-orange"
                       >
@@ -1156,7 +1158,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                         onClick={(e) => {
                           if (hasVariants) {
                             setIsWishlistOpen(false);
-                            router.push(`/product/${prod.id}`);
+                            router.push(getProductUrl(prod));
                           } else {
                             handleQuickAddToCart({
                               ...prod,

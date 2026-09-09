@@ -1,5 +1,6 @@
 'use client';
 
+import { getProductUrl } from '../utils/slug';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Check, ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, X } from 'lucide-react';
@@ -492,7 +493,7 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
                   </button>
                 </div>
                 <Link
-                  href={`/product/${product.id}`}
+                  href={getProductUrl(product)}
                   onClick={onClose}
                   className="flex h-11 items-center justify-center rounded-xl border border-slate-200 px-5 text-xs font-black uppercase tracking-wider text-slate-700 hover:border-slate-400"
                 >

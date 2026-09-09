@@ -1,5 +1,6 @@
 'use client';
 
+import { getProductUrl, getCategoryUrl, getSubCategoryUrl, getItemUrl, slugify } from '../utils/slug';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -13,6 +14,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { useApp } from '../context';
+import { apiFetch } from '../utils/api';
 import ProductQuickView from '../components/ProductQuickView';
 
 type PriceValue = number | string | null;
@@ -225,9 +227,9 @@ function ShopCatalogContent() {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
         const [itemsResponse, categoriesResponse, productsResponse] = await Promise.all([
-          fetch(`${cleanUrl}/items`, { signal: controller.signal }),
-          fetch(`${cleanUrl}/categories`, { signal: controller.signal }),
-          fetch(`${cleanUrl}/products`, { signal: controller.signal }),
+          apiFetch('items', { signal: controller.signal }),
+          apiFetch('categories', { signal: controller.signal }),
+          apiFetch('products', { signal: controller.signal }),
         ]);
 
         if (!itemsResponse.ok || !categoriesResponse.ok || !productsResponse.ok) {
@@ -396,15 +398,26 @@ function ShopCatalogContent() {
     return result;
   }, [itemProducts, maxPrice, minPrice, selectedCategoryId, selectedColors, selectedSizes, selectedSubCategoryId, sortBy, searchQueryParam]);
 
-  const updateCatalogSelection = (categoryId?: number, subCategoryId?: number) => {
+  const updateCatalogSelection = (categoryNameOrId?: string | number, subCategoryNameOrId?: string | number) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (item) params.set('category', normalizeSlug(item.name));
+    if (item) params.set('item', normalizeSlug(item.name));
 
-    if (categoryId) params.set('category_id', categoryId.toString());
-    else params.delete('category_id');
+    if (categoryNameOrId) {
+      const catObj = typeof categoryNameOrId === 'number' ? categories.find(c => c.id === categoryNameOrId) : null;
+      params.set('category', normalizeSlug(catObj?.name || categoryNameOrId.toString()));
+      params.delete('category_id');
+    } else {
+      params.delete('category');
+      params.delete('category_id');
+    }
 
-    if (subCategoryId) params.set('sub_category_id', subCategoryId.toString());
-    else params.delete('sub_category_id');
+    if (subCategoryNameOrId) {
+      params.set('sub_category', normalizeSlug(subCategoryNameOrId.toString()));
+      params.delete('sub_category_id');
+    } else {
+      params.delete('sub_category');
+      params.delete('sub_category_id');
+    }
 
     router.replace(`/shop?${params.toString()}`);
   };
@@ -720,7 +733,7 @@ function ShopCatalogContent() {
                       <span className="hidden sm:inline">Quick View</span>
                     </button>
 
-                    <Link href={`/product/${product.id}`} className="flex flex-1 flex-col">
+                    <Link href={getProductUrl(product)} className="flex flex-1 flex-col">
                       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-slate-50">
                         {regularPrice !== null && price !== null && regularPrice > price && (
                           <span className="absolute left-3 top-3 z-20 rounded-md bg-rose-500 px-2 py-1 text-[9px] font-black text-white">
@@ -757,7 +770,7 @@ function ShopCatalogContent() {
                               event.stopPropagation();
                               if (product.stock_status === 'out_of_stock') return;
                               if (product.has_variant || (product.variants?.length ?? 0) > 0) {
-                                router.push(`/product/${product.id}`);
+                                router.push(getProductUrl(product));
                               } else {
                                 handleQuickAddToCart({
                                   ...product,
