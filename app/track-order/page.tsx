@@ -1,12 +1,16 @@
+import { Suspense } from 'react';
 import TrackOrderClient from './TrackOrderClient';
 
-export default async function TrackOrderPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ order_no?: string | string[] }>;
-}) {
-  const { order_no: orderNoValue } = await searchParams;
-  const initialOrderNo = (Array.isArray(orderNoValue) ? orderNoValue[0] : orderNoValue)?.trim() || '';
-
-  return <TrackOrderClient initialOrderNo={initialOrderNo} />;
+export default function TrackOrderPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[400px] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+        </div>
+      }
+    >
+      <TrackOrderClient />
+    </Suspense>
+  );
 }
