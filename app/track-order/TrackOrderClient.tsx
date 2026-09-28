@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
   ArrowRight,
@@ -198,7 +199,9 @@ function TrackingProductImage({ product }: { product: TrackingProduct }) {
 }
 
 export default function TrackOrderClient({ initialOrderNo = '' }: { initialOrderNo?: string }) {
-  const [orderNo, setOrderNo] = React.useState(initialOrderNo);
+  const searchParams = useSearchParams();
+  const paramOrderNo = searchParams.get('order_no') || initialOrderNo;
+  const [orderNo, setOrderNo] = React.useState(paramOrderNo);
   const [tracking, setTracking] = React.useState<TrackingData | null>(null);
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
@@ -257,11 +260,12 @@ export default function TrackOrderClient({ initialOrderNo = '' }: { initialOrder
   }, []);
 
   React.useEffect(() => {
-    if (!initialOrderNo || autoLoadedOrderRef.current === initialOrderNo) return;
-    autoLoadedOrderRef.current = initialOrderNo;
-    // The query parameter represents an explicit order selected from the customer profile.
-    void trackOrder(initialOrderNo);
-  }, [initialOrderNo, trackOrder]);
+    const effectiveOrderNo = (searchParams.get('order_no') || initialOrderNo).trim();
+    if (!effectiveOrderNo || autoLoadedOrderRef.current === effectiveOrderNo) return;
+    autoLoadedOrderRef.current = effectiveOrderNo;
+    setOrderNo(effectiveOrderNo);
+    void trackOrder(effectiveOrderNo);
+  }, [searchParams, initialOrderNo, trackOrder]);
 
   const handleTrackOrder = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
