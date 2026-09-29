@@ -20,6 +20,7 @@ type PriceValue = number | string | null;
 interface Relation {
   id: number;
   name: string;
+  slug?: string;
 }
 
 interface SubCategory extends Relation {
@@ -66,6 +67,7 @@ interface ProductVariant {
 interface Product {
   id: number;
   name?: string;
+  slug?: string;
   sale_price?: PriceValue;
   regular_price?: PriceValue;
   discount_price?: PriceValue;
@@ -193,7 +195,7 @@ function ShopCatalogContent() {
     resolveImageUrl,
   } = useApp();
 
-  const itemQuery = searchParams.get('category') || 'all';
+  const itemQuery = searchParams.get('item') || searchParams.get('category') || 'all';
   const queryCategoryId = Number(searchParams.get('category_id')) || null;
   const querySubCategoryId = Number(searchParams.get('sub_category_id')) || null;
 
@@ -251,15 +253,15 @@ function ShopCatalogContent() {
         let resolvedItem = itemQuery === 'all'
           ? null
           : items.find(candidate =>
-            candidate.id.toString() === itemQuery || normalizeSlug(candidate.name) === querySlug
+            candidate.slug === itemQuery || candidate.id.toString() === itemQuery || normalizeSlug(candidate.name) === querySlug || normalizeSlug(candidate.slug) === querySlug
           ) ?? null;
         let inferredCategoryId: number | null = null;
         let inferredSubCategoryId: number | null = null;
 
         if (!resolvedItem && itemQuery !== 'all') {
-          const matchedCategory = allCategories.find(category => normalizeSlug(category.name) === querySlug);
+          const matchedCategory = allCategories.find(category => normalizeSlug(category.slug) === querySlug || normalizeSlug(category.name) === querySlug);
           const categoryWithMatchedSubCategory = allCategories.find(category =>
-            category.sub_categories?.some(subCategory => normalizeSlug(subCategory.name) === querySlug)
+            category.sub_categories?.some(subCategory => normalizeSlug(subCategory.slug) === querySlug || normalizeSlug(subCategory.name) === querySlug)
           );
 
           if (matchedCategory?.item) {
@@ -270,7 +272,7 @@ function ShopCatalogContent() {
               ?? categoryWithMatchedSubCategory.item;
             inferredCategoryId = categoryWithMatchedSubCategory.id;
             inferredSubCategoryId = categoryWithMatchedSubCategory.sub_categories
-              ?.find(subCategory => normalizeSlug(subCategory.name) === querySlug)?.id ?? null;
+              ?.find(subCategory => normalizeSlug(subCategory.slug) === querySlug || normalizeSlug(subCategory.name) === querySlug)?.id ?? null;
           }
         }
 
@@ -720,7 +722,7 @@ function ShopCatalogContent() {
                       <span className="hidden sm:inline">Quick View</span>
                     </button>
 
-                    <Link href={`/product/${product.id}`} className="flex flex-1 flex-col">
+                    <Link href={`/product/${product.slug || product.id}`} className="flex flex-1 flex-col">
                       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-slate-50">
                         {regularPrice !== null && price !== null && regularPrice > price && (
                           <span className="absolute left-3 top-3 z-20 rounded-md bg-rose-500 px-2 py-1 text-[9px] font-black text-white">
@@ -757,7 +759,7 @@ function ShopCatalogContent() {
                               event.stopPropagation();
                               if (product.stock_status === 'out_of_stock') return;
                               if (product.has_variant || (product.variants?.length ?? 0) > 0) {
-                                router.push(`/product/${product.id}`);
+                                router.push(`/product/${product.slug || product.id}`);
                               } else {
                                 handleQuickAddToCart({
                                   ...product,

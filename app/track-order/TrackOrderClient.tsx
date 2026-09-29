@@ -62,6 +62,7 @@ interface TrackingData {
 interface TrackingProduct {
   product_id: number;
   name: string;
+  slug?: string;
   sku?: string;
   image?: string;
   variant_id?: number | null;
@@ -393,11 +394,11 @@ export default function TrackOrderClient({ initialOrderNo = '' }: { initialOrder
                   {tracking.products?.map((product, index) => (
                     <div key={`${product.product_id}-${product.variant_id ?? 'base'}-${index}`} className="grid gap-4 py-5 md:grid-cols-[1fr_100px_70px_110px] md:items-center">
                       <div className="flex min-w-0 gap-3">
-                        <Link href={`/product/${product.product_id}`} className="group/product flex h-16 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                        <Link href={`/product/${product.slug || product.product_id}`} className="group/product flex h-16 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                           <TrackingProductImage key={`${product.product_id}-${product.variant_id ?? 'base'}-${product.image ?? 'none'}`} product={product} />
                         </Link>
                         <div className="min-w-0 py-0.5">
-                          <Link href={`/product/${product.product_id}`} className="line-clamp-2 text-sm font-black text-slate-900 hover:text-orange-600">{product.name}</Link>
+                          <Link href={`/product/${product.slug || product.product_id}`} className="line-clamp-2 text-sm font-black text-slate-900 hover:text-orange-600">{product.name}</Link>
                           <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{product.variant_sku || product.sku || 'N/A'}</p>
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {product.variant && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">{product.variant}</span>}

@@ -146,6 +146,14 @@ interface HomeSubCategory extends ApiRelation {
   home_page_title?: string;
 }
 
+interface HomePageSection {
+  id: number;
+  title: string;
+  sub_title?: string | null;
+  sl_no?: number;
+  products: ApiProduct[];
+}
+
 interface WatchBeforeBuyVideo {
   id: number;
   product_id: number;
@@ -210,6 +218,7 @@ export default function Home() {
   const [featuredSubCategories, setFeaturedSubCategories] = useState<FeaturedSubCategory[]>([]);
   const [homeCategories, setHomeCategories] = useState<HomeCategory[]>([]);
   const [homeSubCategories, setHomeSubCategories] = useState<HomeSubCategory[]>([]);
+  const [homePageSections, setHomePageSections] = useState<HomePageSection[]>([]);
   const [watchVideos, setWatchVideos] = useState<WatchBeforeBuyVideo[]>([]);
   const [activeWatchVideo, setActiveWatchVideo] = useState<WatchBeforeBuyVideo | null>(null);
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -296,6 +305,23 @@ export default function Home() {
         console.error('Failed to load home sub categories:', error);
       }
     };
+    const fetchHomePageSections = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const res = await fetch(`${cleanUrl}/home-page-sections`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && Array.isArray(json.data)) {
+            const sorted = (json.data as HomePageSection[])
+              .sort((a, b) => (a.sl_no || 0) - (b.sl_no || 0));
+            setHomePageSections(sorted);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load home page sections:', error);
+      }
+    };
     const fetchWatchVideos = async () => {
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -328,6 +354,7 @@ export default function Home() {
         setIsProductsLoading(false);
       }
     };
+    fetchHomePageSections();
     fetchSliders();
     fetchWatchVideos();
     fetchFeaturedSubCategories();
@@ -425,7 +452,7 @@ export default function Home() {
           <span className="hidden sm:inline">Quick View</span>
         </button>
 
-        <Link href={`/product/${prod.id}`} className="flex flex-col flex-1">
+        <Link href={`/product/${prod.slug || prod.id}`} className="flex flex-col flex-1">
           <div className="relative aspect-square overflow-hidden bg-slate-50 flex items-center justify-center">
             <div className="absolute top-3.5 left-3.5 z-20 flex flex-col gap-1.5 items-start">
               {savingAmount !== null && (
@@ -465,7 +492,7 @@ export default function Home() {
                   e.preventDefault();
                   if (prod.stock_status === 'out_of_stock') return;
                   if (hasVariants) {
-                    router.push(`/product/${prod.id}`);
+                    router.push(`/product/${prod.slug || prod.id}`);
                   } else {
                     handleQuickAddToCart({
                       ...prod,
@@ -838,7 +865,7 @@ export default function Home() {
                         </button>
 
                         <Link
-                          href={`/product/${video.product_id}`}
+                          href={`/product/${video.product?.slug || video.product_id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="flex-1 bg-brand-orange hover:bg-orange-600 text-white text-xs font-bold py-2 px-3 rounded-full flex items-center justify-center transition-all hover:scale-102 active:scale-95 cursor-pointer text-center shadow-md shadow-brand-orange/20"
                         >
@@ -872,7 +899,7 @@ export default function Home() {
                 {featuredSubCategories.map((cat, idx) => (
                   <Link
                     key={idx}
-                    href={`/shop?category=${(cat.name || '').toLowerCase()}`}
+                    href={`/shop?category=${cat.slug || (cat.name || '').toLowerCase()}`}
                     className="w-[125px] md:w-[155px] shrink-0 aspect-[4/5] rounded-xl overflow-hidden relative shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 snap-start group border border-slate-100 cursor-pointer block"
                   >
                     <img
@@ -893,6 +920,58 @@ export default function Home() {
               </div>
             </section>
           )}
+
+          {/* Dynamic Home Page Sections from Admin */}
+          {homePageSections.map(section => {
+            if (!section.products || section.products.length === 0) return null;
+
+            return (
+              <section key={`section-${section.id}`} className="flex flex-col gap-3 w-full mt-4">
+                <div className="flex items-end justify-between border-b border-slate-200/60 pb-2.5">
+                  <div className="flex flex-col gap-0.5">
+                    {section.sub_title && (
+                      <span className="text-[9.5px] md:text-[11px] font-black tracking-[0.2em] text-brand-orange uppercase">
+                        {section.sub_title}
+                      </span>
+                    )}
+                    <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+                      {section.title}
+                      <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
+                    </h2>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById(`home-section-slider-${section.id}`);
+                        if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
+                      }}
+                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById(`home-section-slider-${section.id}`);
+                        if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
+                      }}
+                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  id={`home-section-slider-${section.id}`}
+                  className="w-full overflow-x-auto flex gap-3.5 py-2 scroll-smooth snap-x snap-mandatory no-scrollbar"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {section.products.map((product, idx) => renderProductCard(product, idx, true))}
+                </div>
+              </section>
+            );
+          })}
 
           {/* Dynamic Home Categories Sections (when categories have is_show_home_page = true) */}
           {homeCategories.map(homeCat => {
