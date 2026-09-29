@@ -31,6 +31,7 @@ type WishlistPrice = number | string | null;
 interface WishlistProduct {
   id: number;
   name?: string;
+  slug?: string;
   sku?: string;
   sale_price?: WishlistPrice;
   regular_price?: WishlistPrice;

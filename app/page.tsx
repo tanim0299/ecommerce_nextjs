@@ -99,11 +99,13 @@ interface ApiImage {
 interface ApiRelation {
   id?: number;
   name?: string;
+  slug?: string;
 }
 
 interface ApiProduct {
   id: number;
   name?: string;
+  slug?: string;
   sale_price?: number | string | null;
   regular_price?: number | string | null;
   discount_price?: number | string | null;
@@ -166,6 +168,7 @@ interface WatchBeforeBuyVideo {
   product?: {
     id: number;
     name: string;
+    slug?: string;
     sku?: string;
     sale_price: number;
     regular_price: number;

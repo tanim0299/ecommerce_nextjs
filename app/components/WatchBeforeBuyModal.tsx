@@ -18,6 +18,7 @@ interface WatchBeforeBuyVideo {
   product?: {
     id: number;
     name: string;
+    slug?: string;
     sku?: string;
     sale_price: number;
     regular_price: number;
@@ -60,6 +61,7 @@ interface AttributeGroup {
 interface QuickViewProduct {
   id: number;
   name?: string;
+  slug?: string;
   sku?: string;
   description?: string | null;
   sale_price?: number | string | null;

@@ -53,6 +53,7 @@ interface CustomerReviewItem {
   id: number;
   product_id: number;
   product_name: string;
+  product_slug?: string;
   product_image: string | null;
   product_price: number;
   rating: number;
@@ -60,6 +61,11 @@ interface CustomerReviewItem {
   created_at: string;
   created_at_human: string;
   created_at_formatted: string;
+  product?: {
+    id: number;
+    name?: string;
+    slug?: string;
+  } | null;
 }
 
 export default function ProfilePage() {
