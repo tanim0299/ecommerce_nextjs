@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context';
-import Link from 'next/link';
 
 interface ReviewItem {
   id: number;
   product_id: number;
-  user_id: number;
+  user_id?: number | null;
   user_name: string;
   user_avatar: string | null;
   rating: number;
   review: string | null;
+  is_approved?: boolean;
   created_at: string;
   created_at_human: string;
   is_owner: boolean;
@@ -76,6 +76,13 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
   const [ratingInput, setRatingInput] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [reviewInput, setReviewInput] = useState<string>('');
+  const [guestName, setGuestName] = useState<string>('');
+  const [guestContact, setGuestContact] = useState<string>('');
+
+  const getApiBaseUrl = () => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+    return apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  };
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -87,7 +94,7 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const res = await fetch(`http://127.0.0.1:8088/api/products/${productId}/reviews`, {
+      const res = await fetch(`${getApiBaseUrl()}/products/${productId}/reviews`, {
         headers,
       });
 
@@ -128,14 +135,17 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
     } else {
       setRatingInput(5);
       setReviewInput('');
+      setGuestName('');
+      setGuestContact('');
     }
     setShowForm(true);
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) {
-      showToast('Please login to submit a review', 'error');
+
+    if (!user && !guestName.trim()) {
+      showToast('Please provide your name', 'error');
       return;
     }
 
@@ -146,17 +156,34 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
 
     try {
       setIsSubmitting(true);
-      const res = await fetch(`http://127.0.0.1:8088/api/products/${productId}/reviews`, {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const payload: Record<string, any> = {
+        rating: ratingInput,
+        review: reviewInput.trim() || null,
+      };
+
+      if (!user) {
+        payload.customer_name = guestName.trim();
+        if (guestContact.trim()) {
+          if (guestContact.includes('@')) {
+            payload.customer_email = guestContact.trim();
+          } else {
+            payload.customer_phone = guestContact.trim();
+          }
+        }
+      }
+
+      const res = await fetch(`${getApiBaseUrl()}/products/${productId}/reviews`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          rating: ratingInput,
-          review: reviewInput.trim() || null,
-        }),
+        headers,
+        body: JSON.stringify(payload),
       });
 
       const json = await res.json();
@@ -164,8 +191,11 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
         throw new Error(json.message || 'Failed to submit review');
       }
 
-      showToast(userReview ? 'Review updated successfully!' : 'Thank you! Your review has been posted.', 'success');
+      showToast(json.message || 'Thank you! Your review has been submitted and is pending admin approval.', 'success');
       setShowForm(false);
+      setGuestName('');
+      setGuestContact('');
+      setReviewInput('');
       fetchReviews();
     } catch (err: any) {
       showToast(err.message || 'Error submitting review', 'error');
@@ -179,7 +209,7 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
 
     try {
       setIsSubmitting(true);
-      const res = await fetch(`http://127.0.0.1:8088/api/products/${productId}/reviews`, {
+      const res = await fetch(`${getApiBaseUrl()}/products/${productId}/reviews`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -235,24 +265,22 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
               Based on {totalReviews} verified {totalReviews === 1 ? 'review' : 'reviews'}
             </p>
 
+            {/* User status alert if pending approval */}
+            {userReview && !userReview.is_approved && (
+              <div className="mt-3 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold flex items-center gap-1.5">
+                <span>⏳ Your review is pending admin approval</span>
+              </div>
+            )}
+
             {/* Action button */}
             <div className="mt-4">
-              {!user ? (
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm"
-                >
-                  Sign In to Review
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleOpenForm}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-brand-orange hover:from-orange-600 hover:to-orange-500 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-orange-500/20"
-                >
-                  {userReview ? '✎ Edit Your Review' : '+ Write a Review'}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleOpenForm}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-brand-orange hover:from-orange-600 hover:to-orange-500 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-orange-500/20 cursor-pointer"
+              >
+                {userReview ? '✎ Edit Your Review' : '+ Write a Review'}
+              </button>
             </div>
           </div>
 
@@ -281,7 +309,7 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
         </div>
 
         {/* 2. Collapsible Review Form */}
-        {showForm && user && (
+        {showForm && (
           <div className="mt-8 pt-8 border-t border-slate-100 animate-fadeIn">
             <form onSubmit={handleSubmitReview} className="max-w-2xl bg-slate-50 p-6 rounded-2xl border border-slate-200/80 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200/70 pb-3">
@@ -291,11 +319,42 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                  className="text-xs font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   ✕ Close
                 </button>
               </div>
+
+              {/* Guest Information Fields if not logged in */}
+              {!user && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-xl border border-slate-200">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Your Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      placeholder="e.g. Tanvir Ahmed"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-brand-orange focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Email or Phone <span className="text-slate-400 text-[10px]">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={guestContact}
+                      onChange={(e) => setGuestContact(e.target.value)}
+                      placeholder="e.g. 01700000000 or email"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-brand-orange focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Interactive Star Picker */}
               <div>
@@ -312,7 +371,7 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
                         onClick={() => setRatingInput(star)}
                         onMouseEnter={() => setHoverRating(star)}
                         onMouseLeave={() => setHoverRating(0)}
-                        className="p-1 transition-transform hover:scale-125 focus:outline-none"
+                        className="p-1 transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                         title={`${star} Star`}
                       >
                         <span className={`text-3xl ${isFilled ? 'text-amber-400' : 'text-slate-200'}`}>
@@ -330,7 +389,7 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
               {/* Review Text */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Review Details (Optional)
+                  Review Details <span className="text-slate-400 text-[10px]">(Optional)</span>
                 </label>
                 <textarea
                   value={reviewInput}
@@ -341,13 +400,17 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
                 />
               </div>
 
+              <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/60 text-[11px] text-amber-800 flex items-center gap-2">
+                <span>ℹ️ Note: Submitted reviews will appear on the store after quick moderation by the admin.</span>
+              </div>
+
               <div className="flex items-center justify-between gap-3 pt-2">
                 {userReview ? (
                   <button
                     type="button"
                     onClick={handleDeleteReview}
                     disabled={isSubmitting}
-                    className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline"
+                    className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline cursor-pointer"
                   >
                     Delete this review
                   </button>
@@ -357,14 +420,14 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200 transition-all"
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200 transition-all cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 shadow-sm"
+                    className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 shadow-sm cursor-pointer"
                   >
                     {isSubmitting ? 'Saving...' : userReview ? 'Update Review' : 'Submit Review'}
                   </button>
@@ -417,7 +480,7 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
                           </span>
                         )}
                         <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/60">
-                          ✓ Verified Customer
+                          ✓ Verified Buyer
                         </span>
                       </div>
                       <span className="text-[11px] font-medium text-slate-400">
@@ -433,7 +496,7 @@ export default function ProductReviews({ productId, onReviewStatsUpdate }: Produ
                       <button
                         type="button"
                         onClick={handleOpenForm}
-                        className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-brand-orange rounded-lg border border-slate-200 hover:border-brand-orange bg-white transition-all ml-2"
+                        className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-brand-orange rounded-lg border border-slate-200 hover:border-brand-orange bg-white transition-all ml-2 cursor-pointer"
                       >
                         Edit
                       </button>

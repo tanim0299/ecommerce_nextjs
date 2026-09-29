@@ -40,6 +40,7 @@ interface AttributeGroup {
 interface QuickViewProduct {
   id: number;
   name?: string;
+  slug?: string;
   description?: string | null;
   sale_price?: PriceValue;
   regular_price?: PriceValue;
@@ -492,7 +493,7 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
                   </button>
                 </div>
                 <Link
-                  href={`/product/${product.id}`}
+                  href={`/product/${product.slug || product.id}`}
                   onClick={onClose}
                   className="flex h-11 items-center justify-center rounded-xl border border-slate-200 px-5 text-xs font-black uppercase tracking-wider text-slate-700 hover:border-slate-400"
                 >

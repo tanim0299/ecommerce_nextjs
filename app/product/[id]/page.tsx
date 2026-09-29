@@ -7,16 +7,22 @@ export async function generateStaticParams() {
     const res = await fetch(`${cleanUrl}/products`);
     if (res.ok) {
       const json = await res.json();
-      if (json.status === 'success' && Array.isArray(json.data) && json.data.length > 0) {
-        return json.data.map((p: any) => ({ id: String(p.id) }));
+      const items = json.result || json.data || [];
+      if (Array.isArray(items) && items.length > 0) {
+        const params: { id: string }[] = [];
+        items.forEach((p: any) => {
+          if (p.slug) params.push({ id: String(p.slug) });
+          if (p.id) params.push({ id: String(p.id) });
+        });
+        return params;
       }
     }
   } catch {
     // fallback if backend is not reachable at build time
   }
-  return [{ id: '1' }];
+  return [{ id: '1' }, { id: 'new-balance-9060' }];
 }
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  return <ProductDetailClient params={params} />;
+export default function ProductDetailPage() {
+  return <ProductDetailClient />;
 }

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
   Check,
   ChevronLeft,
@@ -36,6 +36,7 @@ type PriceValue = number | string | null;
 interface Relation {
   id: number;
   name: string;
+  slug?: string;
 }
 
 interface Brand extends Relation {
@@ -91,6 +92,7 @@ interface ProductDetail {
   id: number;
   sku?: string;
   name?: string;
+  slug?: string;
   description?: string | null;
   specification?: Specification[] | null;
   sale_price?: PriceValue;
@@ -171,9 +173,10 @@ const getColorHex = (name: string): string => {
   return '#475569';
 };
 
-export default function ProductDetailClient({ params }: { params: Promise<{ id: string }> }) {
+export default function ProductDetailClient() {
   const router = useRouter();
-  const { id } = React.use(params);
+  const params = useParams();
+  const id = (params?.id as string) || '';
   const {
     cart,
     handleAddToCart,
@@ -572,7 +575,7 @@ export default function ProductDetailClient({ params }: { params: Promise<{ id: 
           {product.category?.name && (
             <>
               <ChevronRight className="h-3 w-3 text-slate-300" />
-              <Link href={`/shop?category=${product.category.name.toLowerCase()}`} className="hover:text-brand-orange transition-colors">
+              <Link href={`/shop?category=${product.category.slug || product.category.name.toLowerCase()}`} className="hover:text-brand-orange transition-colors">
                 {product.category.name.toUpperCase()}
               </Link>
             </>
@@ -580,7 +583,7 @@ export default function ProductDetailClient({ params }: { params: Promise<{ id: 
           {product.sub_category?.name && (
             <>
               <ChevronRight className="h-3 w-3 text-slate-300" />
-              <Link href={`/shop?category=${product.sub_category.name.toLowerCase()}`} className="hover:text-brand-orange transition-colors">
+              <Link href={`/shop?category=${product.sub_category.slug || product.sub_category.name.toLowerCase()}`} className="hover:text-brand-orange transition-colors">
                 {product.sub_category.name.toUpperCase()}
               </Link>
             </>
@@ -1189,7 +1192,7 @@ export default function ProductDetailClient({ params }: { params: Promise<{ id: 
                   key={relProd.id}
                   className="bg-white rounded-xl overflow-hidden border border-slate-100 hover:border-brand-orange/40 shadow-2xs hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col group relative"
                 >
-                  <Link href={`/product/${relProd.id}`} className="relative aspect-square bg-slate-50 overflow-hidden flex items-center justify-center p-3">
+                  <Link href={`/product/${relProd.slug || relProd.id}`} className="relative aspect-square bg-slate-50 overflow-hidden flex items-center justify-center p-3">
                     {relImage ? (
                       <img
                         src={resolveImageUrl(relImage)}
@@ -1204,7 +1207,7 @@ export default function ProductDetailClient({ params }: { params: Promise<{ id: 
                   <div className="p-3 flex flex-col flex-1 justify-between gap-1.5">
                     <div>
                       <span className="text-[8.5px] font-black text-brand-orange uppercase tracking-widest">{relProd.category?.name || 'APPAREL'}</span>
-                      <Link href={`/product/${relProd.id}`} className="block text-xs font-bold text-slate-900 hover:text-brand-orange truncate mt-0.5">
+                      <Link href={`/product/${relProd.slug || relProd.id}`} className="block text-xs font-bold text-slate-900 hover:text-brand-orange truncate mt-0.5">
                         {relProd.name}
                       </Link>
                     </div>

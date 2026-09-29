@@ -1520,7 +1520,7 @@ export default function ProfilePage() {
                             </div>
                             <div>
                               <Link
-                                href={`/product/${rev.product_id}`}
+                                href={`/product/${rev.product?.slug || rev.product_slug || rev.product_id}`}
                                 className="text-sm font-black text-slate-900 hover:text-brand-orange transition-colors line-clamp-1"
                               >
                                 {rev.product_name}
@@ -1541,7 +1541,7 @@ export default function ProfilePage() {
                               ))}
                             </div>
                             <Link
-                              href={`/product/${rev.product_id}`}
+                              href={`/product/${rev.product?.slug || rev.product_slug || rev.product_id}`}
                               className="px-3 py-1 rounded-lg border border-slate-200 hover:border-brand-orange hover:text-brand-orange text-slate-700 text-xs font-bold transition-all bg-slate-50 hover:bg-white"
                             >
                               View

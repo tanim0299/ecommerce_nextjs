@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  ShoppingBag, 
+  ShoppingBag,
+  Copy,
+  Printer,
+  Truck,
+  ArrowRight,
+  ExternalLink, 
   MapPin, 
   Phone, 
   User as UserIcon, 
@@ -12,10 +17,11 @@ import {
   Check, 
   ChevronRight,
   Plus,
-  Tag
+  Tag,
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
 import { useApp } from '../context';
-import SearchableSelect from '../components/SearchableSelect';
 
 interface AddressItem {
   id: number;
@@ -33,6 +39,22 @@ interface AddressItem {
   division?: { name: string; bn_name?: string };
   district?: { name: string; bn_name?: string };
   upazila?: { name: string; bn_name?: string };
+}
+
+interface GeoEntity {
+  id: number;
+  name: string;
+  bn_name?: string;
+  division_id?: number;
+  district_id?: number;
+  country_id?: number;
+}
+
+interface DeliveryZone {
+  id: number;
+  name: string;
+  delivery_fee: number | string;
+  district_ids: number[];
 }
 
 export default function CheckoutPage() {
@@ -54,18 +76,23 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [isAddressesLoading, setIsAddressesLoading] = useState(false);
 
-  // Dropdown states for shipping address
-  const [countries, setCountries] = useState<any[]>([]);
-  const [divisions, setDivisions] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [upazilas, setUpazilas] = useState<any[]>([]);
-  const [deliveryZones, setDeliveryZones] = useState<any[]>([]);
+  // Geo datasets for auto-detection
+  const [countries, setCountries] = useState<GeoEntity[]>([]);
+  const [divisions, setDivisions] = useState<GeoEntity[]>([]);
+  const [districts, setDistricts] = useState<GeoEntity[]>([]);
+  const [upazilas, setUpazilas] = useState<GeoEntity[]>([]);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
 
-  const [selectedCountryId, setSelectedCountryId] = useState<string | number>('');
-  const [selectedDivisionId, setSelectedDivisionId] = useState<string | number>('');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string | number>('');
-  const [selectedUpazilaId, setSelectedUpazilaId] = useState<string | number>('');
-  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  // Detected location state
+  const [detectedCountryId, setDetectedCountryId] = useState<number | null>(1); // Default Bangladesh
+  const [detectedDivisionId, setDetectedDivisionId] = useState<number | null>(null);
+  const [detectedDistrictId, setDetectedDistrictId] = useState<number | null>(null);
+  const [detectedUpazilaId, setDetectedUpazilaId] = useState<number | null>(null);
+  const [detectedLabels, setDetectedLabels] = useState<{
+    upazila?: string;
+    district?: string;
+    division?: string;
+  }>({});
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -76,12 +103,13 @@ export default function CheckoutPage() {
   
   const [placedOrder, setPlacedOrder] = useState<any | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copiedOrderNo, setCopiedOrderNo] = useState(false);
 
   useEffect(() => {
     setIsLoaded(true);
   }, []);
 
-  // Redirect if cart is empty, only after client component has mounted and had time to load cart from localStorage
+  // Redirect if cart is empty
   useEffect(() => {
     if (isLoaded) {
       const storedCart = localStorage.getItem('cart');
@@ -93,137 +121,157 @@ export default function CheckoutPage() {
     }
   }, [isLoaded, cart, router]);
 
-  // Load initial dropdown data
+  // Load geo datasets in background for smart auto-detection
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchGeoData = async () => {
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
 
-        // Fetch countries
-        const countriesRes = await fetch(`${cleanUrl}/countries`);
-        if (countriesRes.ok) {
-          const countriesJson = await countriesRes.json();
-          if (countriesJson.status === 'success' && Array.isArray(countriesJson.data)) {
-            setCountries(countriesJson.data);
-            
-            // Try to detect user country by IP
-            try {
-              const ipRes = await fetch('https://ipapi.co/json/');
-              if (ipRes.ok) {
-                const ipJson = await ipRes.json();
-                const detectedCode = ipJson.country_code || 'BD';
-                const matchedCountry = countriesJson.data.find(
-                  (c: any) => c.code?.toLowerCase() === detectedCode.toLowerCase()
-                );
-                if (matchedCountry) {
-                  setSelectedCountryId(matchedCountry.id);
-                } else {
-                  const bd = countriesJson.data.find((c: any) => c.code?.toLowerCase() === 'bd');
-                  if (bd) setSelectedCountryId(bd.id);
-                }
-              }
-            } catch (ipError) {
-              const bd = countriesJson.data.find((c: any) => c.code?.toLowerCase() === 'bd');
-              if (bd) setSelectedCountryId(bd.id);
-            }
-          }
-        }
+        const [countriesRes, divisionsRes, districtsRes, upazilasRes, zonesRes] = await Promise.all([
+          fetch(`${cleanUrl}/countries`).catch(() => null),
+          fetch(`${cleanUrl}/divisions`).catch(() => null),
+          fetch(`${cleanUrl}/districts`).catch(() => null),
+          fetch(`${cleanUrl}/upazilas`).catch(() => null),
+          fetch(`${cleanUrl}/delivery-zones`).catch(() => null),
+        ]);
 
-        // Fetch divisions
-        const divisionsRes = await fetch(`${cleanUrl}/divisions`);
-        if (divisionsRes.ok) {
-          const divisionsJson = await divisionsRes.json();
-          if (divisionsJson.status === 'success' && Array.isArray(divisionsJson.data)) {
-            setDivisions(divisionsJson.data);
-          }
+        if (countriesRes?.ok) {
+          const json = await countriesRes.json();
+          if (json.status === 'success' && Array.isArray(json.data)) setCountries(json.data);
         }
-
-        // Fetch delivery zones
-        const zonesRes = await fetch(`${cleanUrl}/delivery-zones`);
-        if (zonesRes.ok) {
-          const zonesJson = await zonesRes.json();
-          if (zonesJson.status === 'success' && Array.isArray(zonesJson.data)) {
-            setDeliveryZones(zonesJson.data);
-          }
+        if (divisionsRes?.ok) {
+          const json = await divisionsRes.json();
+          if (json.status === 'success' && Array.isArray(json.data)) setDivisions(json.data);
+        }
+        if (districtsRes?.ok) {
+          const json = await districtsRes.json();
+          if (json.status === 'success' && Array.isArray(json.data)) setDistricts(json.data);
+        }
+        if (upazilasRes?.ok) {
+          const json = await upazilasRes.json();
+          if (json.status === 'success' && Array.isArray(json.data)) setUpazilas(json.data);
+        }
+        if (zonesRes?.ok) {
+          const json = await zonesRes.json();
+          if (json.status === 'success' && Array.isArray(json.data)) setDeliveryZones(json.data);
         }
       } catch (e) {
-        console.error('Failed to fetch initial checkout options:', e);
+        console.error('Failed to load geo datasets for auto-detection:', e);
       }
     };
-    
-    fetchInitialData();
+    fetchGeoData();
   }, []);
 
-  // Fetch districts when division changes
+  // Smart Auto-detect location whenever billingAddress changes
   useEffect(() => {
-    if (!selectedDivisionId) {
-      setDistricts([]);
-      setSelectedDistrictId('');
-      setUpazilas([]);
-      setSelectedUpazilaId('');
-      setDeliveryFee(null);
+    if (!billingAddress || !billingAddress.trim()) {
+      setDetectedDivisionId(null);
+      setDetectedDistrictId(null);
+      setDetectedUpazilaId(null);
+      setDetectedLabels({});
       return;
     }
 
-    const fetchDistricts = async () => {
-      try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/districts?division_id=${selectedDivisionId}`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.status === 'success' && Array.isArray(json.data)) {
-            setDistricts(json.data);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch districts:', e);
-      }
-    };
-    fetchDistricts();
-  }, [selectedDivisionId]);
+    const norm = billingAddress.toLowerCase().replace(/[,.-]/g, ' ');
+    const words = norm.split(/\s+/).filter(Boolean);
 
-  // Fetch upazilas and calculate delivery zone shipping cost when district changes
-  useEffect(() => {
-    if (!selectedDistrictId) {
-      setUpazilas([]);
-      setSelectedUpazilaId('');
-      setDeliveryFee(null);
-      return;
+    let matchedUpazila: GeoEntity | null = null;
+    let matchedDistrict: GeoEntity | null = null;
+    let matchedDivision: GeoEntity | null = null;
+
+    // 1. Check Upazila match (longer names checked first)
+    const sortedUpazilas = [...upazilas].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
+    for (const u of sortedUpazilas) {
+      const uName = (u.name || '').toLowerCase().trim();
+      const uBnName = (u.bn_name || '').trim();
+      if (uName && uName.length >= 3 && (norm.includes(uName) || words.includes(uName))) {
+        matchedUpazila = u;
+        break;
+      }
+      if (uBnName && uBnName.length >= 2 && billingAddress.includes(uBnName)) {
+        matchedUpazila = u;
+        break;
+      }
     }
 
-    const fetchUpazilas = async () => {
-      try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/upazilas?district_id=${selectedDistrictId}`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.status === 'success' && Array.isArray(json.data)) {
-            setUpazilas(json.data);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch upazilas:', e);
-      }
-    };
-    fetchUpazilas();
+    // If upazila matched, find its district
+    if (matchedUpazila && matchedUpazila.district_id) {
+      matchedDistrict = districts.find(d => d.id === matchedUpazila?.district_id) || null;
+    }
 
-    // Check matching delivery zone
-    const matchedZone = deliveryZones.find(zone => {
-      if (Array.isArray(zone.district_ids)) {
-        return zone.district_ids.map(Number).includes(Number(selectedDistrictId));
+    // 2. Check District match directly
+    if (!matchedDistrict) {
+      const sortedDistricts = [...districts].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
+      for (const d of sortedDistricts) {
+        const dName = (d.name || '').toLowerCase().trim();
+        const dBnName = (d.bn_name || '').trim();
+        if (dName && dName.length >= 3 && (norm.includes(dName) || words.includes(dName))) {
+          matchedDistrict = d;
+          break;
+        }
+        if (dBnName && dBnName.length >= 2 && billingAddress.includes(dBnName)) {
+          matchedDistrict = d;
+          break;
+        }
       }
-      return false;
+    }
+
+    // 3. Known famous Dhaka neighborhoods/sub-areas -> auto map to Dhaka district
+    const dhakaAreas = [
+      'dhanmondi', 'mirpur', 'gulshan', 'banani', 'uttara', 'motijheel', 'mohammadpur',
+      'badda', 'bashundhara', 'rampura', 'jatrabari', 'old dhaka', 'puran dhaka', 'farmgate',
+      'mohakhali', 'lalbagh', 'tejgaon', 'khilgaon', 'malibagh', 'shantinagar', 'pallabi',
+      'kafrul', 'cantonment', 'wari', 'keraniganj', 'savar', 'dhamrai', 'ashulia', 'tongie', 'bawnia',
+      'ধানমন্ডি', 'মিরপুর', 'গুলশান', 'বনানী', 'উত্তরা', 'মতিঝিল', 'মোহাম্মদপুর', 'বাড্ডা',
+      'বসুন্ধরা', 'রামপুরা', 'যাত্রাবাড়ী', 'ফার্মগেট', 'মহাখালী', 'লালবাগ', 'তেজগাঁও', 'খিলগাঁও'
+    ];
+    if (!matchedDistrict) {
+      for (const area of dhakaAreas) {
+        if (norm.includes(area) || billingAddress.includes(area)) {
+          matchedDistrict = districts.find(d => (d.name || '').toLowerCase() === 'dhaka') || null;
+          // Also set as upazila label if suitable
+          if (!matchedUpazila) {
+            const foundThana = upazilas.find(u => (u.name || '').toLowerCase().includes(area));
+            if (foundThana) matchedUpazila = foundThana;
+          }
+          break;
+        }
+      }
+    }
+
+    // 4. If district matched, find its division
+    if (matchedDistrict && matchedDistrict.division_id) {
+      matchedDivision = divisions.find(div => div.id === matchedDistrict?.division_id) || null;
+    }
+
+    // 5. If no division yet, match division directly
+    if (!matchedDivision) {
+      for (const div of divisions) {
+        const divName = (div.name || '').toLowerCase().trim();
+        const divBnName = (div.bn_name || '').trim();
+        if (divName && divName.length >= 3 && (norm.includes(divName) || words.includes(divName))) {
+          matchedDivision = div;
+          break;
+        }
+        if (divBnName && divBnName.length >= 2 && billingAddress.includes(divBnName)) {
+          matchedDivision = div;
+          break;
+        }
+      }
+    }
+
+    // Set state
+    setDetectedUpazilaId(matchedUpazila ? matchedUpazila.id : null);
+    setDetectedDistrictId(matchedDistrict ? matchedDistrict.id : null);
+    setDetectedDivisionId(matchedDivision ? matchedDivision.id : (matchedDistrict?.division_id || null));
+
+    setDetectedLabels({
+      upazila: matchedUpazila?.name,
+      district: matchedDistrict?.name,
+      division: matchedDivision?.name,
     });
-
-    if (matchedZone) {
-      setDeliveryFee(Number(matchedZone.delivery_fee));
-    } else {
-      setDeliveryFee(null);
-    }
-  }, [selectedDistrictId, deliveryZones]);
+  }, [billingAddress, upazilas, districts, divisions]);
 
   // Fetch saved addresses if logged in
   useEffect(() => {
@@ -241,7 +289,6 @@ export default function CheckoutPage() {
             const list = json.data || [];
             setSavedAddresses(list);
             
-            // Auto select default address
             const defaultAddr = list.find((a: AddressItem) => a.is_default);
             if (defaultAddr) {
               setSelectedAddressId(defaultAddr.id);
@@ -272,26 +319,42 @@ export default function CheckoutPage() {
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = Math.round((subtotal * discountPercent) / 100);
 
-  // Look up shipping fee for saved address based on its district_id
+  // Delivery zone resolution
   const selectedSavedAddr = savedAddresses.find(a => a.id === selectedAddressId);
   
-  const matchedSavedZone = selectedSavedAddr && selectedSavedAddr.district_id
-    ? deliveryZones.find(zone => Array.isArray(zone.district_ids) && zone.district_ids.map(Number).includes(Number(selectedSavedAddr.district_id)))
-    : null;
-    
-  const matchedCustomZone = selectedDistrictId
-    ? deliveryZones.find(zone => Array.isArray(zone.district_ids) && zone.district_ids.map(Number).includes(Number(selectedDistrictId)))
-    : null;
+  const effectiveDistrictId = (user && addressMode === 'saved' && selectedSavedAddr)
+    ? selectedSavedAddr.district_id
+    : detectedDistrictId;
 
-  const activeZone = (user && addressMode === 'saved') ? matchedSavedZone : matchedCustomZone;
-  const activeZoneName = activeZone ? activeZone.name : '';
+  const matchedZone = useMemo(() => {
+    if (effectiveDistrictId && deliveryZones.length > 0) {
+      const directMatch = deliveryZones.find(zone =>
+        Array.isArray(zone.district_ids) && zone.district_ids.map(Number).includes(Number(effectiveDistrictId))
+      );
+      if (directMatch) return directMatch;
+    }
 
-  const savedAddressFee = matchedSavedZone ? matchedSavedZone.delivery_fee : null;
+    // Default fallback zone based on district name or default first zone
+    if (deliveryZones.length > 0) {
+      if (detectedLabels.district?.toLowerCase() === 'dhaka') {
+        return deliveryZones.find(z => z.name.toLowerCase().includes('inside dhaka')) || deliveryZones[0];
+      }
+      if (detectedLabels.district && detectedLabels.district.toLowerCase() !== 'dhaka') {
+        return deliveryZones.find(z => z.name.toLowerCase().includes('outside dhaka')) || deliveryZones[deliveryZones.length - 1];
+      }
+      return deliveryZones[0];
+    }
+    return null;
+  }, [effectiveDistrictId, deliveryZones, detectedLabels.district]);
 
-  const shippingCost = (user && addressMode === 'saved') 
-    ? (savedAddressFee !== null ? Number(savedAddressFee) : null) 
-    : deliveryFee;
-  const total = subtotal - discountAmount + (shippingCost || 0);
+  const activeZoneName = matchedZone ? matchedZone.name : (detectedLabels.district ? (detectedLabels.district.toLowerCase() === 'dhaka' ? 'Inside Dhaka' : 'Outside Dhaka') : 'Standard Delivery');
+
+  // Use exact backend delivery zone fee
+  const baseDeliveryFee = matchedZone 
+    ? Number(matchedZone.delivery_fee) 
+    : (detectedLabels.district ? (detectedLabels.district.toLowerCase() === 'dhaka' ? 80 : 180) : 80);
+  const shippingCost = cart.length === 0 ? 0 : baseDeliveryFee;
+  const total = subtotal - discountAmount + shippingCost;
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,26 +369,25 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Verification
+    // Validation
     if (user && addressMode === 'saved') {
       if (!selectedAddressId) {
         showToast('Please select a shipping address.', 'error');
         return;
       }
     } else {
-      if (!billingName || !billingPhone || !billingAddress) {
-        showToast('Please fill in Name, Phone, and Shipping Address details.', 'error');
+      if (!billingName.trim()) {
+        showToast('Please enter your full name.', 'error');
         return;
       }
-      if (!selectedCountryId || !selectedDivisionId || !selectedDistrictId || !selectedUpazilaId) {
-        showToast('Please select Country, Division, District, and Upazila.', 'error');
+      if (!billingPhone.trim()) {
+        showToast('Please enter your phone number.', 'error');
         return;
       }
-    }
-
-    if (shippingCost === null) {
-      showToast('Please select your shipping location (Division & District) to calculate delivery charge.', 'error');
-      return;
+      if (!billingAddress.trim()) {
+        showToast('Please enter your delivery address.', 'error');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -356,17 +418,28 @@ export default function CheckoutPage() {
       const finalEmail = (user && addressMode === 'saved') ? (user.email || '') : billingEmail;
       const finalAddress = (user && addressMode === 'saved' && selectedSavedAddr) ? selectedSavedAddr.address : billingAddress;
 
-      const finalCountryId = (user && addressMode === 'saved' && selectedSavedAddr) ? selectedSavedAddr.country_id : selectedCountryId;
-      const finalDivisionId = (user && addressMode === 'saved' && selectedSavedAddr) ? selectedSavedAddr.division_id : selectedDivisionId;
-      const finalDistrictId = (user && addressMode === 'saved' && selectedSavedAddr) ? selectedSavedAddr.district_id : selectedDistrictId;
-      const finalUpazilaId = (user && addressMode === 'saved' && selectedSavedAddr) ? selectedSavedAddr.upazila_id : selectedUpazilaId;
+      const finalCountryId = (user && addressMode === 'saved' && selectedSavedAddr) 
+        ? selectedSavedAddr.country_id 
+        : (detectedCountryId || 1);
+
+      const finalDivisionId = (user && addressMode === 'saved' && selectedSavedAddr) 
+        ? selectedSavedAddr.division_id 
+        : detectedDivisionId;
+
+      const finalDistrictId = (user && addressMode === 'saved' && selectedSavedAddr) 
+        ? selectedSavedAddr.district_id 
+        : detectedDistrictId;
+
+      const finalUpazilaId = (user && addressMode === 'saved' && selectedSavedAddr) 
+        ? selectedSavedAddr.upazila_id 
+        : detectedUpazilaId;
 
       const payload = {
         name: finalName,
         phone: finalPhone,
         email: finalEmail || null,
         address: finalAddress,
-        country_id: finalCountryId ? Number(finalCountryId) : null,
+        country_id: finalCountryId ? Number(finalCountryId) : 1,
         division_id: finalDivisionId ? Number(finalDivisionId) : null,
         district_id: finalDistrictId ? Number(finalDistrictId) : null,
         upazila_id: finalUpazilaId ? Number(finalUpazilaId) : null,
@@ -393,7 +466,7 @@ export default function CheckoutPage() {
         setCart([]);
         localStorage.removeItem('cart');
       } else {
-        showToast(json.message || 'Failed to place order. Please check input parameters.', 'error');
+        showToast(json.message || 'Failed to place order. Please check input details.', 'error');
       }
     } catch (err) {
       console.error(err);
@@ -403,159 +476,243 @@ export default function CheckoutPage() {
     }
   };
 
+  // -------------------------------------------------------------
+  // INVOICE / ORDER SUCCESS SCREEN
+  // -------------------------------------------------------------
   if (placedOrder) {
+    const handleCopyOrderId = () => {
+      if (placedOrder?.order_no) {
+        navigator.clipboard.writeText(placedOrder.order_no);
+        setCopiedOrderNo(true);
+        showToast('Order ID copied to clipboard!', 'success');
+        setTimeout(() => setCopiedOrderNo(false), 2500);
+      }
+    };
+
     return (
-      <div className="w-full py-12 max-w-3xl mx-auto px-4 animate-slide-up">
-        {/* Printable Invoice Container */}
-        <div id="printable-invoice" className="bg-white border border-slate-150 rounded-3xl p-8 md:p-10 shadow-2xl relative">
-          
-          {/* Printable Style Overlay */}
-          <style>{`
-            @media print {
-              body {
-                background: white !important;
-                color: black !important;
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-              header, footer, nav, button, .no-print {
-                display: none !important;
-                height: 0 !important;
-                overflow: hidden !important;
-              }
-              #printable-invoice {
-                border: none !important;
-                box-shadow: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
-              }
-            }
-          `}</style>
-
-          {/* Success Checkmark Banner */}
-          <div className="flex flex-col items-center text-center pb-8 border-b border-slate-100 no-print">
-            <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
-              <Check className="w-8 h-8 stroke-[3]" />
+      <div className="w-full py-10 max-w-4xl mx-auto px-4 sm:px-6">
+        {/* Top Hero Banner - Clear message "Your order is placed" */}
+        <div className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 text-white rounded-3xl p-6 sm:p-8 mb-8 shadow-xl relative overflow-hidden no-print">
+          <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center flex-shrink-0 shadow-lg text-white">
+                <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
+              </div>
+              <div>
+                <span className="inline-block bg-white/20 text-emerald-100 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-1 border border-white/20">
+                  Order Confirmed
+                </span>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  Your order is placed!
+                </h1>
+                <p className="text-xs sm:text-sm text-emerald-100 font-medium mt-1">
+                  Thank you for shopping with us. Your order has been placed successfully and is being prepared.
+                </p>
+              </div>
             </div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">Thank You For Your Order!</h1>
-            <p className="text-xs text-slate-500 font-semibold mt-1">Your order has been placed successfully and is being processed.</p>
-          </div>
 
-          {/* Brand Logo & Order Header */}
-          <div className="flex justify-between items-start pt-8 pb-6">
+            {/* Quick Actions */}
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={handleCopyOrderId}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-xs font-bold transition-all cursor-pointer select-none"
+              >
+                {copiedOrderNo ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedOrderNo ? 'Copied ID' : 'Copy ID'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/track-order')}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-emerald-900 hover:bg-emerald-50 text-xs font-black transition-all shadow-md cursor-pointer select-none"
+              >
+                <Truck className="w-3.5 h-3.5" />
+                <span>Track Order</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Printable Confirmation Receipt */}
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden print-invoice">
+          
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-slate-100 gap-4">
             <div>
               {systemConfig?.logo ? (
                 <img src={systemConfig.logo} alt={systemConfig.title || 'Logo'} className="h-10 w-auto max-w-[180px] object-contain" />
               ) : (
-                <h2 className="text-lg font-black text-slate-900 tracking-tighter">{systemConfig?.title || 'STORE'}</h2>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">{systemConfig?.title || 'CLOTHING STORE'}</h2>
               )}
-              <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Online Apparel Store</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Official Order Confirmation Receipt</p>
             </div>
-            <div className="text-right">
-              <span className="bg-slate-900 text-white text-[9px] font-black tracking-widest px-2.5 py-1 rounded-md uppercase">
-                INVOICE
-              </span>
-              <p className="text-xs font-black text-slate-800 mt-2.5">#{placedOrder.order_no}</p>
-              <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">
-                Date: {new Date(placedOrder.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+            <div className="text-left sm:text-right">
+              <div className="inline-flex items-center gap-1.5 bg-slate-900 text-white text-[10px] font-black tracking-widest px-3 py-1 rounded-md uppercase">
+                RECEIPT #{placedOrder.order_no}
+              </div>
+              <p className="text-xs text-slate-500 font-semibold mt-2">
+                Placed Date: <span className="text-slate-800 font-bold">{new Date(placedOrder.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
               </p>
             </div>
           </div>
 
-          {/* Shipping & Payment Meta */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 rounded-2xl p-5 border border-slate-100 my-6 text-xs">
+          {/* Customer & Shipping Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/80 rounded-2xl p-5 sm:p-6 border border-slate-100 my-6">
             <div className="flex flex-col gap-1.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Shipping Details</span>
-              <h4 className="font-extrabold text-slate-900">{placedOrder.name}</h4>
-              <p className="text-slate-500 font-semibold">{placedOrder.phone}</p>
-              {placedOrder.email && <p className="text-slate-450 font-medium">{placedOrder.email}</p>}
-              <p className="text-slate-700 font-bold leading-relaxed mt-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-brand-orange" />
+                Delivery Address
+              </span>
+              <h4 className="font-extrabold text-sm text-slate-900">{placedOrder.name}</h4>
+              <p className="text-xs text-slate-600 font-semibold flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                {placedOrder.phone}
+              </p>
+              {placedOrder.email && (
+                <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  {placedOrder.email}
+                </p>
+              )}
+              <p className="text-xs text-slate-700 font-semibold leading-relaxed mt-1.5 bg-white p-2.5 rounded-lg border border-slate-100">
                 {placedOrder.address}
               </p>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Payment Details</span>
-              <p className="text-slate-700 font-bold">
-                Method: <span className="uppercase text-brand-orange">{placedOrder.payment_method}</span>
-              </p>
-              <p className="text-slate-700 font-bold">
-                Status: <span className="capitalize">{placedOrder.status}</span>
-              </p>
+
+            <div className="flex flex-col gap-2 justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-brand-orange" />
+                  Payment & Delivery Status
+                </span>
+                <div className="mt-2 space-y-1.5 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-200/50">
+                    <span className="text-slate-500 font-medium">Payment Method</span>
+                    <span className="font-extrabold text-slate-900 uppercase">
+                      {placedOrder.payment_method === 'cod' ? 'Cash on Delivery (COD)' : (placedOrder.payment_method || 'Cash on Delivery')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200/50">
+                    <span className="text-slate-500 font-medium">Order Status</span>
+                    <span className="inline-flex items-center gap-1 font-bold text-amber-600 capitalize bg-amber-50 px-2 py-0.5 rounded">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      {placedOrder.status || 'Pending'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-500 font-medium">Estimated Delivery</span>
+                    <span className="font-bold text-slate-700">2-3 Business Days</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-[11px] text-emerald-800 font-medium">
+                💡 Please keep the exact amount ready in cash upon delivery. Our representative will contact you before dispatch.
+              </div>
             </div>
           </div>
 
           {/* Items Table */}
-          <div className="border border-slate-150 rounded-2xl overflow-hidden mt-6">
+          <div className="border border-slate-200 rounded-2xl overflow-hidden mt-6">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-150 text-slate-500 font-black uppercase tracking-wider text-[9px]">
-                  <th className="px-4 py-3">Description</th>
-                  <th className="px-4 py-3 text-center">Qty</th>
-                  <th className="px-4 py-3 text-right">Price</th>
-                  <th className="px-4 py-3 text-right">Total</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-black uppercase tracking-wider text-[10px]">
+                  <th className="px-4 py-3.5">Item Details</th>
+                  <th className="px-4 py-3.5 text-center">Qty</th>
+                  <th className="px-4 py-3.5 text-right">Price</th>
+                  <th className="px-4 py-3.5 text-right">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                {placedOrder.items && placedOrder.items.map((item: any) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-3.5">
-                      <span className="block font-extrabold text-slate-800">{item.product?.name || 'Product'}</span>
-                      {item.size || item.color ? (
-                        <span className="text-[9px] text-slate-400 uppercase mt-0.5 block">
-                          Size: {item.size} | Color: {item.color}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3.5 text-center text-slate-900">{item.quantity}</td>
-                    <td className="px-4 py-3.5 text-right">BDT {item.price}</td>
-                    <td className="px-4 py-3.5 text-right text-slate-900 font-extrabold">
-                      BDT {Number(item.price) * Number(item.quantity)}
-                    </td>
-                  </tr>
-                ))}
+                {placedOrder.items && placedOrder.items.map((item: any, idx: number) => {
+                  const itemImg = item.product?.image || item.image;
+                  return (
+                    <tr key={item.id || idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          {itemImg && (
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                              <img src={resolveImageUrl(itemImg)} alt={item.product?.name || 'Product'} className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          <div>
+                            <span className="block font-extrabold text-slate-900 text-xs sm:text-sm">
+                              {item.product?.name || item.name || 'Product Item'}
+                            </span>
+                            {(item.size || item.color) && (
+                              <span className="text-[10px] text-slate-500 font-bold uppercase mt-0.5 block">
+                                {item.size ? 'Size: ' + item.size : ''} {item.size && item.color ? '| ' : ''} {item.color ? 'Color: ' + item.color : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-center text-slate-900 font-bold">{item.quantity}</td>
+                      <td className="px-4 py-3.5 text-right font-medium text-slate-600">BDT {item.price}</td>
+                      <td className="px-4 py-3.5 text-right text-slate-900 font-black">
+                        BDT {Number(item.price) * Number(item.quantity)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Totals Summary */}
           <div className="flex justify-end mt-6">
-            <div className="w-full sm:w-64 flex flex-col gap-2.5 text-xs font-semibold text-slate-500">
+            <div className="w-full sm:w-72 flex flex-col gap-2.5 text-xs font-semibold text-slate-600 bg-slate-50/50 p-4 rounded-2xl border border-slate-150">
               <div className="flex justify-between items-center">
                 <span>Subtotal</span>
                 <span className="text-slate-900 font-extrabold">BDT {placedOrder.subtotal}</span>
               </div>
               {Number(placedOrder.discount_amount) > 0 && (
                 <div className="flex justify-between items-center text-emerald-600 font-bold">
-                  <span>Discount</span>
+                  <span>Coupon Discount</span>
                   <span>- BDT {placedOrder.discount_amount}</span>
                 </div>
               )}
               <div className="flex justify-between items-center">
-                <span>Shipping Fee</span>
-                <span className="text-slate-900 font-extrabold">BDT {placedOrder.delivery_fee}</span>
+                <span>Shipping / Delivery Fee</span>
+                <span className="text-slate-900 font-extrabold">
+                  {Number(placedOrder.delivery_fee) === 0 ? (
+                    <span className="text-emerald-600 font-bold">FREE</span>
+                  ) : (
+                    'BDT ' + placedOrder.delivery_fee
+                  )}
+                </span>
               </div>
-              <div className="flex justify-between items-center border-t border-slate-100 pt-3 text-sm font-black text-slate-900">
+              <div className="flex justify-between items-center border-t border-slate-200 pt-3 text-sm font-black text-slate-950">
                 <span>Grand Total</span>
-                <span className="text-brand-orange text-base">BDT {placedOrder.grand_total}</span>
+                <span className="text-brand-orange text-base font-black">BDT {placedOrder.grand_total}</span>
               </div>
             </div>
           </div>
 
-          {/* Action buttons (no-print) */}
-          <div className="flex flex-wrap gap-4 mt-10 pt-6 border-t border-slate-100 justify-end no-print">
-            <button
-              onClick={() => window.print()}
-              className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
-            >
-              Print Invoice / PDF
-            </button>
-            <button
-              onClick={() => router.push('/')}
-              className="px-6 py-2.5 bg-brand-orange hover:bg-orange-600 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-brand-orange/15"
-            >
-              Continue Shopping
-            </button>
+          {/* Action buttons (hidden when printing) */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100 no-print">
+            <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold">
+              <span>Order Reference: <strong className="text-slate-700">#{placedOrder.order_no}</strong></span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2 border border-slate-200 shadow-sm"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Receipt</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/')}
+                className="px-6 py-2.5 bg-brand-orange hover:bg-orange-600 text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-brand-orange/20"
+              >
+                <span>Continue Shopping</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
         </div>
@@ -563,6 +720,9 @@ export default function CheckoutPage() {
     );
   }
 
+  // -------------------------------------------------------------
+  // CHECKOUT FORM SCREEN
+  // -------------------------------------------------------------
   return (
     <div className="w-full py-8 max-w-7xl mx-auto px-4">
       {/* Breadcrumb */}
@@ -583,7 +743,7 @@ export default function CheckoutPage() {
           <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-xl">
             <h2 className="text-sm font-black uppercase text-slate-950 tracking-wider mb-5 flex items-center gap-2 pb-3 border-b border-slate-100">
               <MapPin className="w-4 h-4 text-brand-orange" />
-              Shipping & Billing Address
+              Shipping &amp; Billing Address
             </h2>
 
             {user && (
@@ -608,28 +768,25 @@ export default function CheckoutPage() {
                       : 'border-transparent text-slate-400 hover:text-slate-650'
                   }`}
                 >
-                  Ship to a New Address
+                  Add / Custom Address
                 </button>
               </div>
             )}
 
             {user && addressMode === 'saved' ? (
-              /* LOGGED IN USER ADDRESS SELECTOR */
-              <div className="flex flex-col gap-4">
+              /* LOGGED IN SAVED ADDRESSES */
+              <div>
                 {isAddressesLoading ? (
-                  <div className="flex justify-center py-6">
-                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-brand-orange" />
-                  </div>
+                  <div className="py-8 text-center text-xs text-slate-400">Loading saved addresses...</div>
                 ) : savedAddresses.length === 0 ? (
-                  <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                    <p className="text-xs font-bold text-slate-500">No saved addresses found.</p>
+                  <div className="py-8 text-center flex flex-col items-center gap-3">
+                    <p className="text-xs text-slate-500 font-semibold">No saved addresses found.</p>
                     <button
-                      onClick={() => {
-                        setAddressMode('custom');
-                      }}
-                      className="mt-3 px-4 py-2 bg-brand-orange text-white font-bold text-[10px] uppercase rounded-lg hover:bg-orange-600 transition-colors cursor-pointer"
+                      type="button"
+                      onClick={() => setAddressMode('custom')}
+                      className="px-4 py-2 bg-brand-orange text-white text-xs font-bold rounded-lg uppercase"
                     >
-                      Enter Address Manually
+                      Enter Delivery Address
                     </button>
                   </div>
                 ) : (
@@ -672,7 +829,7 @@ export default function CheckoutPage() {
                 )}
               </div>
             ) : (
-              /* GUEST USER / CUSTOM ADDRESS BILLING FORM */
+              /* STREAMLINED CUSTOM / GUEST BILLING FORM */
               <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
@@ -685,7 +842,7 @@ export default function CheckoutPage() {
                         placeholder="e.g. Tanim Rahman"
                         value={billingName}
                         onChange={(e) => setBillingName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
                       />
                     </div>
                   </div>
@@ -695,12 +852,12 @@ export default function CheckoutPage() {
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
-                        type="text"
+                        type="tel"
                         required
-                        placeholder="e.g. +8801712345678"
+                        placeholder="e.g. 01712345678"
                         value={billingPhone}
                         onChange={(e) => setBillingPhone(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
                       />
                     </div>
                   </div>
@@ -715,72 +872,54 @@ export default function CheckoutPage() {
                       placeholder="e.g. user@example.com"
                       value={billingEmail}
                       onChange={(e) => setBillingEmail(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Country Selection */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Country</label>
-                    <SearchableSelect
-                      options={countries.map(c => ({ id: c.id, name: c.name }))}
-                      value={selectedCountryId}
-                      onChange={(val) => setSelectedCountryId(val)}
-                      placeholder="Select Country"
-                    />
-                  </div>
-
-                  {/* Division Selection */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Division</label>
-                    <SearchableSelect
-                      options={divisions.map(d => ({ id: d.id, name: `${d.name} ${d.bn_name ? `(${d.bn_name})` : ''}` }))}
-                      value={selectedDivisionId}
-                      onChange={(val) => setSelectedDivisionId(val)}
-                      placeholder="Select Division"
-                      disabled={!selectedCountryId}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* District Selection */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">District</label>
-                    <SearchableSelect
-                      options={districts.map(d => ({ id: d.id, name: `${d.name} ${d.bn_name ? `(${d.bn_name})` : ''}` }))}
-                      value={selectedDistrictId}
-                      onChange={(val) => setSelectedDistrictId(val)}
-                      placeholder="Select District"
-                      disabled={!selectedDivisionId}
-                    />
-                  </div>
-
-                  {/* Upazila Selection */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Upazila</label>
-                    <SearchableSelect
-                      options={upazilas.map(u => ({ id: u.id, name: `${u.name} ${u.bn_name ? `(${u.bn_name})` : ''}` }))}
-                      value={selectedUpazilaId}
-                      onChange={(val) => setSelectedUpazilaId(val)}
-                      placeholder="Select Upazila"
-                      disabled={!selectedDistrictId}
-                    />
-                  </div>
-                </div>
-
+                {/* Delivery Address Field with Smart Auto-detection */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Detailed Address (Street/House/Area)</label>
-                  <textarea
-                    required
-                    rows={2}
-                    placeholder="e.g. House 42, Road 11, Banani"
-                    value={billingAddress}
-                    onChange={(e) => setBillingAddress(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 resize-none"
-                  />
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                      Full Delivery Address
+                    </label>
+                    <span className="text-[9px] font-bold text-slate-400">
+                      Include house/road, area &amp; district
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      required
+                      rows={3}
+                      placeholder="e.g. House 42, Road 11, Dhanmondi, Dhaka (বা আপনার সম্পূর্ণ ঠিকানা লিখুন)"
+                      value={billingAddress}
+                      onChange={(e) => setBillingAddress(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 leading-relaxed transition-colors"
+                    />
+                  </div>
+
+                  {/* Auto-detected location indicator badge */}
+                  {billingAddress.trim().length > 0 && (
+                    <div className="mt-1">
+                      {detectedLabels.district || detectedLabels.upazila ? (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200/70 rounded-lg text-emerald-800 text-[11px] font-bold animate-fadeIn">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                          <span className="truncate">
+                            Location: <span className="font-extrabold">{detectedLabels.upazila ? `${detectedLabels.upazila}, ` : ''}{detectedLabels.district}</span>
+                            {detectedLabels.division && detectedLabels.division !== detectedLabels.district && ` (${detectedLabels.division} Division)`}
+                          </span>
+                          <span className="ml-auto text-[10px] uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded font-black whitespace-nowrap">
+                            {activeZoneName} (৳{shippingCost})
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200/80 rounded-lg text-slate-600 text-[10.5px] font-medium">
+                          <Sparkles className="w-3.5 h-3.5 text-brand-orange flex-shrink-0" />
+                          <span>Type your district or area (e.g. Dhaka, Chittagong, Sylhet) to auto-detect delivery zone.</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -797,7 +936,7 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod('cod')}
-                className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${
+                className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all cursor-pointer ${
                   paymentMethod === 'cod'
                     ? 'border-brand-orange bg-brand-orange/5 ring-1 ring-brand-orange/20 shadow-md'
                     : 'border-slate-150 bg-white hover:border-slate-350'
@@ -916,13 +1055,15 @@ export default function CheckoutPage() {
                     </span>
                   )}
                 </span>
-                <span>{shippingCost === 0 ? 'FREE' : `BDT ${shippingCost}`}</span>
+                <span className={shippingCost === 0 ? 'text-emerald-600 font-bold' : ''}>
+                  {shippingCost === 0 ? 'FREE' : `BDT ${shippingCost}`}
+                </span>
               </div>
             </div>
 
             <div className="flex justify-between items-center text-sm font-black text-slate-900 mb-6">
               <span>Grand Total</span>
-              <span className="text-lg text-brand-orange">BDT {total}</span>
+              <span className="text-lg text-brand-orange font-extrabold">BDT {total}</span>
             </div>
 
             <button

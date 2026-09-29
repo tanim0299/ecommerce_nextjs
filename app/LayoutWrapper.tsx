@@ -333,7 +333,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               return (
                 <Link
                   key={prod.id}
-                  href={`/product/${prod.id}`}
+                  href={`/product/${prod.slug || prod.id}`}
                   onClick={() => {
                     setShowSearchSuggestions(false);
                     setSearchQuery('');
@@ -743,7 +743,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 return (
                   <div key={item.id} className="relative group/nav py-1.5 cursor-pointer">
                     <span 
-                      onClick={() => handleCategoryClick((item.name || '').toLowerCase())}
+                      onClick={() => handleCategoryClick(item.slug || (item.name || '').toLowerCase())}
                       className="hover:text-brand-orange transition-colors flex items-center gap-1 group-hover/nav:text-brand-orange"
                     >
                       <span>{item.name}</span>
@@ -759,7 +759,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                           {itemCategories.map((cat) => (
                             <button
                               key={cat.id}
-                              onClick={() => handleCategoryClick((cat.name || '').toLowerCase())}
+                              onClick={() => handleCategoryClick(cat.slug || (cat.name || '').toLowerCase())}
                               className="flex items-center justify-between px-3.5 py-2 text-left text-[11px] font-bold text-slate-700 hover:text-brand-orange hover:bg-slate-50/80 rounded-lg transition-all duration-200 cursor-pointer group/cat"
                             >
                               <span>{cat.name}</span>
@@ -778,7 +778,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                             return (
                               <div key={cat.id} className="flex flex-col gap-3 min-w-[130px]">
                                 <h5 
-                                  onClick={() => handleCategoryClick((cat.name || '').toLowerCase())}
+                                  onClick={() => handleCategoryClick(cat.slug || (cat.name || '').toLowerCase())}
                                   className="font-black text-[10.5px] text-slate-900 tracking-widest uppercase border-b-2 border-brand-orange/30 pb-1.5 self-start hover:text-brand-orange transition-colors cursor-pointer"
                                 >
                                   {cat.name}
@@ -788,7 +788,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                                     {catSubCategories.map((sub: any) => (
                                       <button
                                         key={sub.id}
-                                        onClick={() => handleCategoryClick((sub.name || '').toLowerCase())}
+                                        onClick={() => handleCategoryClick(sub.slug || (sub.name || '').toLowerCase())}
                                         className="text-left text-[11px] font-bold text-slate-500 hover:text-brand-orange transition-all duration-200 hover:translate-x-1 flex items-center gap-1.5 group/item cursor-pointer"
                                       >
                                         <span className="w-1 h-1 rounded-full bg-slate-300 group-hover/item:bg-brand-orange transition-colors" />
@@ -860,7 +860,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 apiItems.slice(0, 5).map((item) => (
                   <Link
                     key={item.id}
-                    href={`/shop?item=${encodeURIComponent((item.name || '').toLowerCase())}`}
+                    href={`/shop?item=${item.slug || encodeURIComponent((item.name || '').toLowerCase())}`}
                     className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
                   >
                     {item.name}
@@ -1115,7 +1115,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   <div key={likedId} className="flex gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-300 items-center">
                     {/* Thumbnail */}
                     <Link
-                      href={`/product/${prod.id}`}
+                      href={`/product/${prod.slug || prod.id}`}
                       onClick={() => setIsWishlistOpen(false)}
                       className="w-16 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200/60"
                     >
@@ -1134,7 +1134,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                         <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">{prod.brand.name}</span>
                       )}
                       <Link
-                        href={`/product/${prod.id}`}
+                        href={`/product/${prod.slug || prod.id}`}
                         onClick={() => setIsWishlistOpen(false)}
                         className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug hover:text-brand-orange"
                       >
@@ -1156,7 +1156,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                         onClick={(e) => {
                           if (hasVariants) {
                             setIsWishlistOpen(false);
-                            router.push(`/product/${prod.id}`);
+                            router.push(`/product/${prod.slug || prod.id}`);
                           } else {
                             handleQuickAddToCart({
                               ...prod,
@@ -1478,7 +1478,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                       <div className="flex justify-between items-center py-1.5">
                         <button
                           onClick={() => {
-                            handleCategoryClick((item.name || '').toLowerCase());
+                            handleCategoryClick(item.slug || (item.name || '').toLowerCase());
                             setIsMobileMenuOpen(false);
                           }}
                           className="text-left font-black text-sm text-slate-800 hover:text-brand-orange uppercase tracking-wide cursor-pointer flex-1"
@@ -1513,7 +1513,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                                 <div className="flex justify-between items-center py-1">
                                   <button
                                     onClick={() => {
-                                      handleCategoryClick((cat.name || '').toLowerCase());
+                                      handleCategoryClick(cat.slug || (cat.name || '').toLowerCase());
                                       setIsMobileMenuOpen(false);
                                     }}
                                     className="text-left font-bold text-xs text-slate-600 hover:text-brand-orange uppercase tracking-wide cursor-pointer flex-1"
@@ -1541,7 +1541,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                                       <button
                                         key={sub.id}
                                         onClick={() => {
-                                          handleCategoryClick((sub.name || '').toLowerCase());
+                                          handleCategoryClick(sub.slug || (sub.name || '').toLowerCase());
                                           setIsMobileMenuOpen(false);
                                         }}
                                         className="text-left font-semibold text-[11px] text-slate-500 hover:text-brand-orange transition-colors py-0.5 cursor-pointer"
