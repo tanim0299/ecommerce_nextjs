@@ -1,5 +1,7 @@
 import CustomPolicyClient from './CustomPolicyClient';
 
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
   try {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
