@@ -24,7 +24,7 @@ import {
   ChevronDown,
   Mic
 } from 'lucide-react';
-import { useApp } from './context';
+import { useApp, getProductUrl } from './context';
 
 type WishlistPrice = number | string | null;
 
@@ -276,7 +276,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
     let title = pageTitles[pathname];
     if (!title) {
-      if (pathname.startsWith('/product/')) {
+      if (pathname.startsWith('/product/') || pathname === '/product') {
         title = `Product Details | ${siteTitle}`;
       } else {
         const routeName = pathname.replace(/^\//, '').replace(/-/g, ' ');
@@ -334,7 +334,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               return (
                 <Link
                   key={prod.id}
-                  href={`/product/${prod.slug || prod.id}`}
+                  href={getProductUrl(prod)}
                   onClick={() => {
                     setShowSearchSuggestions(false);
                     setSearchQuery('');
@@ -1116,7 +1116,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   <div key={likedId} className="flex gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-300 items-center">
                     {/* Thumbnail */}
                     <Link
-                      href={`/product/${prod.slug || prod.id}`}
+                      href={getProductUrl(prod)}
                       onClick={() => setIsWishlistOpen(false)}
                       className="w-16 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200/60"
                     >
@@ -1135,7 +1135,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                         <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">{prod.brand.name}</span>
                       )}
                       <Link
-                        href={`/product/${prod.slug || prod.id}`}
+                        href={getProductUrl(prod)}
                         onClick={() => setIsWishlistOpen(false)}
                         className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug hover:text-brand-orange"
                       >
@@ -1157,7 +1157,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                         onClick={(e) => {
                           if (hasVariants) {
                             setIsWishlistOpen(false);
-                            router.push(`/product/${prod.slug || prod.id}`);
+                            router.push(getProductUrl(prod));
                           } else {
                             handleQuickAddToCart({
                               ...prod,

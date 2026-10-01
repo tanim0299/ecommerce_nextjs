@@ -1,6 +1,5 @@
 import CustomPolicyClient from './CustomPolicyClient';
 
-export const dynamicParams = true;
 
 export async function generateStaticParams() {
   try {

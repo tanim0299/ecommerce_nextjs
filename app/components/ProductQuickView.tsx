@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Check, ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, X } from 'lucide-react';
-import { useApp } from '../context';
+import { useApp, getProductUrl } from '../context';
 import SafeHtml from './SafeHtml';
 
 type PriceValue = number | string | null;
@@ -493,7 +493,7 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
                   </button>
                 </div>
                 <Link
-                  href={`/product/${product.slug || product.id}`}
+                  href={getProductUrl(product)}
                   onClick={onClose}
                   className="flex h-11 items-center justify-center rounded-xl border border-slate-200 px-5 text-xs font-black uppercase tracking-wider text-slate-700 hover:border-slate-400"
                 >

@@ -1,6 +1,6 @@
+import React, { Suspense } from 'react';
 import ProductDetailClient from './ProductDetailClient';
 
-export const dynamicParams = true;
 
 export async function generateStaticParams() {
   try {
@@ -26,5 +26,9 @@ export async function generateStaticParams() {
 }
 
 export default function ProductDetailPage() {
-  return <ProductDetailClient />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <ProductDetailClient />
+    </Suspense>
+  );
 }
