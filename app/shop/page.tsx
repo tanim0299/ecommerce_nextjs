@@ -12,7 +12,7 @@ import {
   ShoppingBag,
   SlidersHorizontal,
 } from 'lucide-react';
-import { useApp } from '../context';
+import { useApp, getProductUrl } from '../context';
 import ProductQuickView from '../components/ProductQuickView';
 
 type PriceValue = number | string | null;
@@ -722,7 +722,7 @@ function ShopCatalogContent() {
                       <span className="hidden sm:inline">Quick View</span>
                     </button>
 
-                    <Link href={`/product/${product.slug || product.id}`} className="flex flex-1 flex-col">
+                    <Link href={getProductUrl(product)} className="flex flex-1 flex-col">
                       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-slate-50">
                         {regularPrice !== null && price !== null && regularPrice > price && (
                           <span className="absolute left-3 top-3 z-20 rounded-md bg-rose-500 px-2 py-1 text-[9px] font-black text-white">
@@ -759,7 +759,7 @@ function ShopCatalogContent() {
                               event.stopPropagation();
                               if (product.stock_status === 'out_of_stock') return;
                               if (product.has_variant || (product.variants?.length ?? 0) > 0) {
-                                router.push(`/product/${product.slug || product.id}`);
+                                router.push(getProductUrl(product));
                               } else {
                                 handleQuickAddToCart({
                                   ...product,

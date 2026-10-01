@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import {
   Check,
   ChevronLeft,
@@ -25,7 +25,7 @@ import {
   Play,
   Video as VideoIcon,
 } from 'lucide-react';
-import { useApp } from '../../context';
+import { useApp, getProductUrl } from '../../context';
 import SafeHtml from '../../components/SafeHtml';
 import ProductReviews from '../../components/ProductReviews';
 import ProductComments from '../../components/ProductComments';
@@ -176,7 +176,8 @@ const getColorHex = (name: string): string => {
 export default function ProductDetailClient() {
   const router = useRouter();
   const params = useParams();
-  const id = (params?.id as string) || '';
+  const searchParams = useSearchParams();
+  const id = searchParams?.get('id') || searchParams?.get('slug') || (params?.id as string) || '';
   const {
     cart,
     handleAddToCart,
@@ -481,7 +482,8 @@ export default function ProductDetailClient() {
 
   const handleShare = () => {
     if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href);
+      const shareUrl = product ? `${window.location.origin}${getProductUrl(product)}` : window.location.href;
+      navigator.clipboard.writeText(shareUrl);
       setIsCopiedUrl(true);
       setTimeout(() => setIsCopiedUrl(false), 2000);
     }
@@ -1192,7 +1194,7 @@ export default function ProductDetailClient() {
                   key={relProd.id}
                   className="bg-white rounded-xl overflow-hidden border border-slate-100 hover:border-brand-orange/40 shadow-2xs hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col group relative"
                 >
-                  <Link href={`/product/${relProd.slug || relProd.id}`} className="relative aspect-square bg-slate-50 overflow-hidden flex items-center justify-center p-3">
+                  <Link href={getProductUrl(relProd)} className="relative aspect-square bg-slate-50 overflow-hidden flex items-center justify-center p-3">
                     {relImage ? (
                       <img
                         src={resolveImageUrl(relImage)}
@@ -1207,7 +1209,7 @@ export default function ProductDetailClient() {
                   <div className="p-3 flex flex-col flex-1 justify-between gap-1.5">
                     <div>
                       <span className="text-[8.5px] font-black text-brand-orange uppercase tracking-widest">{relProd.category?.name || 'APPAREL'}</span>
-                      <Link href={`/product/${relProd.slug || relProd.id}`} className="block text-xs font-bold text-slate-900 hover:text-brand-orange truncate mt-0.5">
+                      <Link href={getProductUrl(relProd)} className="block text-xs font-bold text-slate-900 hover:text-brand-orange truncate mt-0.5">
                         {relProd.name}
                       </Link>
                     </div>

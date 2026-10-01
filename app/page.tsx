@@ -14,7 +14,7 @@ import {
   ExternalLink,
   ShoppingBag,
 } from 'lucide-react';
-import { useApp } from './context';
+import { useApp, getProductUrl } from './context';
 import ProductQuickView from './components/ProductQuickView';
 import WatchBeforeBuyModal from './components/WatchBeforeBuyModal';
 
@@ -99,11 +99,13 @@ interface ApiImage {
 interface ApiRelation {
   id?: number;
   name?: string;
+  slug?: string;
 }
 
 interface ApiProduct {
   id: number;
   name?: string;
+  slug?: string;
   sale_price?: number | string | null;
   regular_price?: number | string | null;
   discount_price?: number | string | null;
@@ -166,6 +168,7 @@ interface WatchBeforeBuyVideo {
   product?: {
     id: number;
     name: string;
+    slug?: string;
     sku?: string;
     sale_price: number;
     regular_price: number;
@@ -452,7 +455,7 @@ export default function Home() {
           <span className="hidden sm:inline">Quick View</span>
         </button>
 
-        <Link href={`/product/${prod.slug || prod.id}`} className="flex flex-col flex-1">
+        <Link href={getProductUrl(prod)} className="flex flex-col flex-1">
           <div className="relative aspect-square overflow-hidden bg-slate-50 flex items-center justify-center">
             <div className="absolute top-3.5 left-3.5 z-20 flex flex-col gap-1.5 items-start">
               {savingAmount !== null && (
@@ -492,7 +495,7 @@ export default function Home() {
                   e.preventDefault();
                   if (prod.stock_status === 'out_of_stock') return;
                   if (hasVariants) {
-                    router.push(`/product/${prod.slug || prod.id}`);
+                    router.push(getProductUrl(prod));
                   } else {
                     handleQuickAddToCart({
                       ...prod,
@@ -865,7 +868,7 @@ export default function Home() {
                         </button>
 
                         <Link
-                          href={`/product/${video.product?.slug || video.product_id}`}
+                          href={getProductUrl(video.product || { id: video.product_id })}
                           onClick={(e) => e.stopPropagation()}
                           className="flex-1 bg-brand-orange hover:bg-orange-600 text-white text-xs font-bold py-2 px-3 rounded-full flex items-center justify-center transition-all hover:scale-102 active:scale-95 cursor-pointer text-center shadow-md shadow-brand-orange/20"
                         >

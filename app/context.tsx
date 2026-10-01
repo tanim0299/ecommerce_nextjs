@@ -2,6 +2,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ShoppingBag } from 'lucide-react';
 
+export const getProductUrl = (p?: { id?: number | string; slug?: string | null; name?: string | null; product_id?: number | string; product_slug?: string | null } | null): string => {
+  if (!p) return '/shop';
+  const rawId = p.id ?? p.product_id;
+  const rawSlug = p.slug ?? p.product_slug;
+  const nameSlug = p.name ? p.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '';
+  
+  const id = rawId !== undefined && rawId !== null && rawId !== '' ? String(rawId) : (rawSlug || '');
+  const slug = rawSlug || nameSlug;
+
+  if (id && slug && id !== slug) {
+    return `/product?id=${encodeURIComponent(id)}&slug=${encodeURIComponent(slug)}`;
+  }
+  return `/product?id=${encodeURIComponent(id || slug || '')}`;
+};
+
 export interface CartItem {
   id: string;
   name: string;

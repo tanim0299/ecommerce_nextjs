@@ -26,7 +26,7 @@ import {
   PackageSearch,
   Copy
 } from 'lucide-react';
-import { useApp, UserProfile } from '../context';
+import { useApp, UserProfile, getProductUrl } from '../context';
 import SearchableSelect from '../components/SearchableSelect';
 
 interface AddressItem {
@@ -53,6 +53,7 @@ interface CustomerReviewItem {
   id: number;
   product_id: number;
   product_name: string;
+  product_slug?: string;
   product_image: string | null;
   product_price: number;
   rating: number;
@@ -60,6 +61,11 @@ interface CustomerReviewItem {
   created_at: string;
   created_at_human: string;
   created_at_formatted: string;
+  product?: {
+    id: number;
+    name?: string;
+    slug?: string;
+  } | null;
 }
 
 export default function ProfilePage() {
@@ -1520,7 +1526,7 @@ export default function ProfilePage() {
                             </div>
                             <div>
                               <Link
-                                href={`/product/${rev.product?.slug || rev.product_slug || rev.product_id}`}
+                                href={getProductUrl(rev.product || { id: rev.product_id, slug: rev.product_slug, name: rev.product_name })}
                                 className="text-sm font-black text-slate-900 hover:text-brand-orange transition-colors line-clamp-1"
                               >
                                 {rev.product_name}
@@ -1541,7 +1547,7 @@ export default function ProfilePage() {
                               ))}
                             </div>
                             <Link
-                              href={`/product/${rev.product?.slug || rev.product_slug || rev.product_id}`}
+                              href={getProductUrl(rev.product || { id: rev.product_id, slug: rev.product_slug, name: rev.product_name })}
                               className="px-3 py-1 rounded-lg border border-slate-200 hover:border-brand-orange hover:text-brand-orange text-slate-700 text-xs font-bold transition-all bg-slate-50 hover:bg-white"
                             >
                               View
