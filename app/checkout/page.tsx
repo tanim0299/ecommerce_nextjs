@@ -1,4 +1,5 @@
 'use client';
+import { trackMetaEvent } from '../utils/pixel';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -62,6 +63,22 @@ export default function CheckoutPage() {
   const { cart, setCart, user, token, showToast, resolveImageUrl, handleUpdateCartQty, handleRemoveFromCart, systemConfig } = useApp();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  useEffect(() => {
+    if (cart && cart.length > 0) {
+      try {
+        const cartSubtotal = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+        trackMetaEvent('InitiateCheckout', {
+          value: cartSubtotal,
+          currency: 'BDT',
+          num_items: cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0),
+          content_ids: cart.map(i => i.id)
+        });
+      } catch (e) {
+        console.debug('InitiateCheckout tracking error:', e);
+      }
+    }
+  }, []);
+
 
   // Guest billing state (for non-logged in users)
   const [billingName, setBillingName] = useState('');
@@ -461,7 +478,22 @@ export default function CheckoutPage() {
       if (res.ok && json.status === 'success') {
         showToast('Order placed successfully!', 'success');
         setPlacedOrder(json.data);
-        
+
+        // Meta Pixel & CAPI Deduplicated Purchase Event
+        try {
+          trackMetaEvent('Purchase', {
+            value: Number(json.data?.grand_total || 0),
+            currency: 'BDT',
+            content_ids: itemsPayload.map(i => String(i.product_id)),
+            num_items: itemsPayload.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
+            order_id: String(json.data?.order_no || '')
+          }, {
+            eventID: String(json.data?.order_no || '')
+          });
+        } catch (e) {
+          console.debug('Purchase tracking error:', e);
+        }
+
         // Clear Cart
         setCart([]);
         localStorage.removeItem('cart');
@@ -863,20 +895,6 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Email Address (Optional)</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="email"
-                      placeholder="e.g. user@example.com"
-                      value={billingEmail}
-                      onChange={(e) => setBillingEmail(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
-                    />
-                  </div>
-                </div>
-
                 {/* Delivery Address Field with Smart Auto-detection */}
                 <div className="flex flex-col gap-1.5">
                   <div className="flex justify-between items-center">
@@ -920,6 +938,20 @@ export default function CheckoutPage() {
                       )}
                     </div>
                   )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Email Address (Optional)</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="email"
+                      placeholder="e.g. user@example.com"
+                      value={billingEmail}
+                      onChange={(e) => setBillingEmail(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
+                    />
+                  </div>
                 </div>
               </div>
             )}
