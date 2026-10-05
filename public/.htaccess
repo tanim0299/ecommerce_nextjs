@@ -1,12 +1,19 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  
-  # If the requested file or directory exists, serve it directly
+
+  # 1. If the requested file or directory exists, serve directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
-  
-  # Otherwise, route to index.html
+
+  # 2. Dynamic product detail pages fallback to /product/index.html
+  RewriteRule ^product/.*$ /product/index.html [L]
+
+  # 3. Dynamic custom pages fallback to /pages/index.html (if exists) or 404.html
+  RewriteCond %{DOCUMENT_ROOT}/pages/index.html -f
+  RewriteRule ^pages/.*$ /pages/index.html [L]
+
+  # 4. Fallback everything else to root index.html
   RewriteRule ^ index.html [L]
 </IfModule>

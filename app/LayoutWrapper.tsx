@@ -1,5 +1,8 @@
 'use client';
 
+import GoogleTagManager from './components/GoogleTagManager';
+import MetaPixel from './components/MetaPixel';
+
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -465,11 +468,13 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         console.error('Failed to fetch pages from API:', e);
       }
     };
-    fetchApiItems();
-    fetchApiCategories();
-    fetchApiSubCategories();
-    fetchApiProducts();
-    fetchApiPages();
+    Promise.allSettled([
+      fetchApiItems(),
+      fetchApiCategories(),
+      fetchApiSubCategories(),
+      fetchApiProducts(),
+      fetchApiPages(),
+    ]);
   }, []);
 
   const wishlistProducts = likedProducts
@@ -539,6 +544,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <GoogleTagManager />
+      <MetaPixel />
       {/* Top Banner Message */}
       <div className="w-full bg-slate-950 text-white py-1 px-4 text-center text-[9.5px] font-bold uppercase tracking-wider border-b border-slate-900 flex justify-center items-center gap-4">
         <span className="flex items-center gap-1"><Truck className="w-3 h-3 text-amber-500" /> FREE SHIPPING ON ORDERS OVER BDT 1500!</span>

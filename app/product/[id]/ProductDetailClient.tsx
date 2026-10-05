@@ -1,4 +1,5 @@
 'use client';
+import { trackMetaEvent } from '../../utils/pixel';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
@@ -220,7 +221,17 @@ export default function ProductDetailClient() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const id = searchParams?.get('id') || searchParams?.get('slug') || (params?.id as string) || '';
+  // Extract slug or ID from route params, pathname (/product/[slug]), or search params (?slug= or ?id=)
+  let pathnameSlug = '';
+  if (typeof window !== 'undefined') {
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const prodIdx = parts.indexOf('product');
+    if (prodIdx !== -1 && parts[prodIdx + 1]) {
+      pathnameSlug = decodeURIComponent(parts[prodIdx + 1]);
+    }
+  }
+
+  const id = (params?.id as string) || pathnameSlug || searchParams?.get('slug') || searchParams?.get('id') || '';
   const {
     cart,
     handleAddToCart,
@@ -324,6 +335,15 @@ export default function ProductDetailClient() {
         }
 
         setProduct(normalizedProduct);
+
+        // Meta Pixel & GTM ViewContent event
+        trackMetaEvent('ViewContent', {
+          content_name: normalizedProduct.name,
+          content_ids: [normalizedProduct.id],
+          content_type: 'product',
+          value: Number(normalizedProduct.sale_price || normalizedProduct.regular_price || 0),
+          currency: 'BDT',
+        });
         setSelectedImage(firstImage);
 
         // Check if product has videos -> prioritize video first!

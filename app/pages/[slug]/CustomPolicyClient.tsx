@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
   ArrowLeft,
   ChevronRight,
@@ -34,9 +34,29 @@ interface PageListItem {
   slug: string;
 }
 
-export default function CustomPolicyClient({ params }: { params: Promise<{ slug: string }> }) {
+export default function CustomPolicyClient({ params }: { params?: Promise<{ slug: string }> }) {
   const router = useRouter();
-  const { slug } = React.use(params);
+  const nextParams = useParams();
+
+  let resolvedSlug = '';
+  if (params) {
+    try {
+      const p = React.use(params);
+      resolvedSlug = p?.slug || '';
+    } catch {}
+  }
+  if (!resolvedSlug && nextParams?.slug) {
+    resolvedSlug = nextParams.slug as string;
+  }
+  if (!resolvedSlug && typeof window !== 'undefined') {
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const pIdx = parts.indexOf('pages');
+    if (pIdx !== -1 && parts[pIdx + 1]) {
+      resolvedSlug = decodeURIComponent(parts[pIdx + 1]);
+    }
+  }
+
+  const slug = resolvedSlug;
 
   const [page, setPage] = useState<PageDetail | null>(null);
   const [allPages, setAllPages] = useState<PageListItem[]>([]);

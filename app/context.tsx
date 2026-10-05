@@ -1,20 +1,20 @@
 'use client';
+import { trackMetaEvent } from './utils/pixel';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ShoppingBag } from 'lucide-react';
 
 export const getProductUrl = (p?: { id?: number | string; slug?: string | null; name?: string | null; product_id?: number | string; product_slug?: string | null } | null): string => {
   if (!p) return '/shop';
-  const rawId = p.id ?? p.product_id;
   const rawSlug = p.slug ?? p.product_slug;
   const nameSlug = p.name ? p.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '';
-  
-  const id = rawId !== undefined && rawId !== null && rawId !== '' ? String(rawId) : (rawSlug || '');
-  const slug = rawSlug || nameSlug;
+  const rawId = p.id ?? p.product_id;
 
-  if (id && slug && id !== slug) {
-    return `/product?id=${encodeURIComponent(id)}&slug=${encodeURIComponent(slug)}`;
-  }
-  return `/product?id=${encodeURIComponent(id || slug || '')}`;
+  const slug = (rawSlug && String(rawSlug).trim() !== '')
+    ? String(rawSlug).trim()
+    : (nameSlug && nameSlug.trim() !== '' ? nameSlug : (rawId !== undefined && rawId !== null && String(rawId).trim() !== '' ? String(rawId) : ''));
+
+  if (!slug) return '/shop';
+  return `/product/${encodeURIComponent(slug)}`;
 };
 
 export interface CartItem {
@@ -37,6 +37,24 @@ export interface UserProfile {
   [key: string]: any;
 }
 
+export interface MarketingConfig {
+  gtm_id?: string | null;
+  gtm_enabled?: boolean;
+  google_analytics_id?: string | null;
+  fb_pixel_id?: string | null;
+  fb_pixel_enabled?: boolean;
+  fb_track_page_view?: boolean;
+  fb_track_view_content?: boolean;
+  fb_track_add_to_cart?: boolean;
+  fb_track_initiate_checkout?: boolean;
+  fb_track_purchase?: boolean;
+  custom_head_scripts?: string | null;
+  custom_body_scripts?: string | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
+  meta_keywords?: string | null;
+}
+
 export interface SystemConfig {
   title: string;
   logo: string;
@@ -45,6 +63,8 @@ export interface SystemConfig {
   emails: string[];
   address: string;
   google_map: string;
+  gtm_id?: string | null;
+  marketing?: MarketingConfig;
 }
 
 export interface FlyingItem {
@@ -333,6 +353,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handleAddToCart = (item: CartItem, sourceCoords?: any) => {
     triggerFlyAnimation(item.image, sourceCoords);
+
+    try {
+      trackMetaEvent('AddToCart', {
+        content_name: item.name,
+        content_ids: [item.id],
+        content_type: 'product',
+        value: (Number(item.price) || 0) * (Number(item.quantity) || 1),
+        currency: 'BDT'
+      });
+    } catch (e) {
+      console.debug('AddToCart tracking error:', e);
+    }
 
     setCart((prevCart) => {
       const itemIndex = prevCart.findIndex(

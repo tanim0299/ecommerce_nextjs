@@ -163,6 +163,7 @@ interface WatchBeforeBuyVideo {
   title: string;
   video_url?: string | null;
   video?: string | null;
+  thumbnail?: string | null;
   platform?: string;
   sl_no?: number;
   product?: {
@@ -357,13 +358,15 @@ export default function Home() {
         setIsProductsLoading(false);
       }
     };
-    fetchHomePageSections();
-    fetchSliders();
-    fetchWatchVideos();
-    fetchFeaturedSubCategories();
-    fetchHomeCategories();
-    fetchHomeSubCategories();
-    fetchProducts();
+    Promise.allSettled([
+      fetchHomePageSections(),
+      fetchSliders(),
+      fetchWatchVideos(),
+      fetchFeaturedSubCategories(),
+      fetchHomeCategories(),
+      fetchHomeSubCategories(),
+      fetchProducts(),
+    ]);
   }, []);
 
   const productsForCategory = (homeCat: HomeCategory) => {
