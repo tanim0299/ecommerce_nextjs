@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Minus, Plus, ShoppingBag, X, Star, Zap, Check } from 'lucide-react';
 import { useApp } from '../context';
+import FacebookEmbedPlayer from './FacebookEmbedPlayer';
 
 interface WatchBeforeBuyVideo {
   id: number;
@@ -13,6 +14,7 @@ interface WatchBeforeBuyVideo {
   title: string;
   video_url?: string | null;
   video?: string | null;
+  thumbnail?: string | null;
   platform?: string;
   sl_no?: number;
   product?: {
@@ -99,16 +101,51 @@ const getYouTubeId = (url?: string | null) => {
   return generalMatch ? generalMatch[1] : null;
 };
 
+const isFacebookUrl = (url?: string | null) => {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return lower.includes('facebook.com') || lower.includes('fb.watch') || lower.includes('fb.com');
+};
+
+const isDirectVideoFile = (url?: string | null) => {
+  if (!url) return false;
+  const clean = url.split('?')[0].toLowerCase();
+  return clean.endsWith('.mp4') || clean.endsWith('.webm') || clean.endsWith('.ogg') || clean.endsWith('.mov') || url.includes('/storage/');
+};
+
 const getEmbedPlayerUrl = (url?: string | null) => {
   if (!url) return '';
-  const ytId = getYouTubeId(url);
+  let cleanUrl = url.trim();
+
+  const iframeSrcMatch = cleanUrl.match(/src=["']([^"']+)["']/i);
+  if (iframeSrcMatch && iframeSrcMatch[1]) {
+    cleanUrl = iframeSrcMatch[1];
+  }
+
+  const ytId = getYouTubeId(cleanUrl);
   if (ytId) {
     return `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&controls=1`;
   }
-  if (url.includes('facebook.com') || url.includes('fb.watch')) {
-    return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=true`;
+
+  if (isFacebookUrl(cleanUrl)) {
+    if (cleanUrl.includes('facebook.com/plugins/video.php')) {
+      let enhanced = cleanUrl;
+      const sep = enhanced.includes('?') ? '&' : '?';
+      if (!enhanced.includes('autoplay=')) enhanced += `${sep}autoplay=true`;
+      if (!enhanced.includes('muted=') && !enhanced.includes('mute=')) enhanced += '&muted=true';
+      return enhanced;
+    }
+    return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&autoplay=true&muted=true`;
   }
-  return url;
+
+  if (cleanUrl.includes('tiktok.com')) {
+    const videoIdMatch = cleanUrl.match(/\/video\/(\d+)/);
+    if (videoIdMatch && videoIdMatch[1]) {
+      return `https://www.tiktok.com/embed/v2/${videoIdMatch[1]}`;
+    }
+  }
+
+  return cleanUrl;
 };
 
 const getColorHex = (name: string): string => {
@@ -293,10 +330,10 @@ export default function WatchBeforeBuyModal({ video, onClose }: WatchBeforeBuyMo
     router.push('/checkout');
   };
 
-  const rawUrl = video.video || video.video_url || '';
-  const videoSrc = rawUrl ? resolveImageUrl(rawUrl) : '';
   const ytId = getYouTubeId(video.video_url);
-  const isUploadedVideo = !!video.video || (!video.video_url?.includes('youtube') && !video.video_url?.includes('facebook') && !video.video_url?.includes('tiktok') && !video.video_url?.includes('instagram'));
+  const isFb = isFacebookUrl(video.video_url);
+  const isDirectFile = (video.video && isDirectVideoFile(video.video)) || isDirectVideoFile(video.video_url);
+  const fileSrc = video.video ? resolveImageUrl(video.video) : (isDirectVideoFile(video.video_url) ? resolveImageUrl(video.video_url!) : '');
 
   return (
     <div
@@ -313,12 +350,18 @@ export default function WatchBeforeBuyModal({ video, onClose }: WatchBeforeBuyMo
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&controls=1`}
               className="w-full h-full border-0 absolute inset-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />
-          ) : isUploadedVideo && videoSrc ? (
+          ) : isFb ? (
+            <FacebookEmbedPlayer
+              url={video.video_url || ''}
+              autoplay={true}
+              className="absolute inset-0"
+            />
+          ) : isDirectFile && fileSrc ? (
             <video
-              src={videoSrc}
+              src={fileSrc}
               controls
               autoPlay
               loop
@@ -329,7 +372,7 @@ export default function WatchBeforeBuyModal({ video, onClose }: WatchBeforeBuyMo
             <iframe
               src={getEmbedPlayerUrl(video.video_url)}
               className="w-full h-full border-0 absolute inset-0"
-              allow="autoplay; encrypted-media"
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
               allowFullScreen
             />
           )}

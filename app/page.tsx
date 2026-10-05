@@ -795,6 +795,7 @@ export default function Home() {
                 {watchVideos.map((video, idx) => {
                   const rawSrc = video.video || video.video_url || '';
                   const videoSrc = rawSrc ? resolveImageUrl(rawSrc) : '';
+                  const customThumb = video.thumbnail ? resolveImageUrl(video.thumbnail) : null;
                   const ytThumb = getYouTubeThumb(video.video_url);
                   const isUploadedVideo = !!video.video || (!video.video_url?.includes('youtube') && !video.video_url?.includes('facebook') && !video.video_url?.includes('tiktok') && !video.video_url?.includes('instagram'));
 
@@ -806,7 +807,13 @@ export default function Home() {
                     >
                       {/* Top Reel Frame */}
                       <div className="w-full aspect-[9/14] rounded-xl overflow-hidden relative bg-slate-950 shadow-inner">
-                        {ytThumb ? (
+                        {customThumb ? (
+                          <img
+                            src={customThumb}
+                            alt={video.title || 'Video Reel'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : ytThumb ? (
                           <img
                             src={ytThumb}
                             alt={video.title || 'Video Reel'}
