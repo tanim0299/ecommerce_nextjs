@@ -344,6 +344,15 @@ export default function ProductDetailClient() {
           value: Number(normalizedProduct.sale_price || normalizedProduct.regular_price || 0),
           currency: 'BDT',
         });
+
+        // Ensure browser address bar updates to clean canonical slug path
+        if (typeof window !== 'undefined' && data.slug) {
+          const canonicalPath = `/product/${encodeURIComponent(data.slug)}`;
+          if (window.location.pathname !== canonicalPath || window.location.search) {
+            window.history.replaceState(null, '', canonicalPath);
+          }
+        }
+
         setSelectedImage(firstImage);
 
         // Check if product has videos -> prioritize video first!

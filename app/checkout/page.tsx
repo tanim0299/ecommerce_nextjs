@@ -121,14 +121,15 @@ export default function CheckoutPage() {
   const [placedOrder, setPlacedOrder] = useState<any | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedOrderNo, setCopiedOrderNo] = useState(false);
+  const orderSubmittedRef = React.useRef(false);
 
   useEffect(() => {
     setIsLoaded(true);
   }, []);
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty on arrival (only if not currently submitting or completing an order)
   useEffect(() => {
-    if (isLoaded) {
+    if (isLoaded && !orderSubmittedRef.current && !placedOrder) {
       const storedCart = localStorage.getItem('cart');
       const cartItems = storedCart ? JSON.parse(storedCart) : [];
       if (cartItems.length === 0 && cart.length === 0) {
@@ -136,7 +137,7 @@ export default function CheckoutPage() {
         router.push('/');
       }
     }
-  }, [isLoaded, cart, router]);
+  }, [isLoaded, cart, router, placedOrder]);
 
   // Load geo datasets in background for smart auto-detection
   useEffect(() => {
@@ -476,17 +477,120 @@ export default function CheckoutPage() {
 
       const json = await res.json();
       if (res.ok && json.status === 'success') {
-        showToast('Order placed successfully!', 'success');
+        orderSubmittedRef.current = true;
         setPlacedOrder(json.data);
 
-        // Meta Pixel & CAPI Deduplicated Purchase Event
+        // Store in sessionStorage for instant loading on the thank you page
         try {
+          if (json.data) {
+            sessionStorage.setItem('last_placed_order', JSON.stringify(json.data));
+          }
+        } catch (storageErr) {
+          console.debug('Session storage write error:', storageErr);
+        }
+
+        // Meta Pixel & GTM Purchase Event with Full Customer Data
+        try {
+          const divisionName = divisions.find(d => d.id === finalDivisionId)?.name || '';
+          const districtName = districts.find(d => d.id === finalDistrictId)?.name || '';
+          const upazilaName = upazilas.find(u => u.id === finalUpazilaId)?.name || '';
+          const countryName = countries.find(c => c.id === finalCountryId)?.name || 'Bangladesh';
+
+          const nameParts = (finalName || '').trim().split(/\s+/);
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || firstName;
+
+          const cleanPhone = (finalPhone || '').trim();
+          const formattedPhoneWithPrefix = cleanPhone.startsWith('+88')
+            ? cleanPhone
+            : (cleanPhone.startsWith('88') ? `+${cleanPhone}` : (cleanPhone.startsWith('01') ? `+88${cleanPhone}` : cleanPhone));
+
+          const orderItemsPayload = cart.map(item => ({
+            item_id: String(item.id),
+            item_name: item.name,
+            price: Number(item.price) || 0,
+            quantity: Number(item.quantity) || 1,
+            item_variant: item.size || item.colorName || undefined,
+            size: item.size || undefined,
+            color: item.colorName || undefined,
+          }));
+
           trackMetaEvent('Purchase', {
-            value: Number(json.data?.grand_total || 0),
+            // Standard Meta / GA4 Core
+            value: Number(json.data?.grand_total || total),
             currency: 'BDT',
             content_ids: itemsPayload.map(i => String(i.product_id)),
+            content_name: cart.map(c => c.name).join(', '),
+            content_type: 'product',
             num_items: itemsPayload.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
-            order_id: String(json.data?.order_no || '')
+            order_id: String(json.data?.order_no || ''),
+            transaction_id: String(json.data?.order_no || ''),
+
+            // Customer Details (Direct DataLayer Variables)
+            customer_name: finalName,
+            first_name: firstName,
+            last_name: lastName,
+            customer_phone: cleanPhone,
+            phone: cleanPhone,
+            phone_number: formattedPhoneWithPrefix,
+            customer_email: finalEmail || '',
+            email: finalEmail || '',
+            customer_address: finalAddress,
+            address: finalAddress,
+            street: finalAddress,
+            customer_city: districtName,
+            city: districtName,
+            district: districtName,
+            customer_division: divisionName,
+            division: divisionName,
+            region: divisionName,
+            state: divisionName,
+            upazila: upazilaName,
+            customer_country: countryName,
+            country: 'Bangladesh',
+            country_code: 'BD',
+            payment_method: paymentMethod,
+
+            // Customer Object for GTM Custom JS / Nested Variables
+            customer: {
+              name: finalName,
+              first_name: firstName,
+              last_name: lastName,
+              phone: cleanPhone,
+              phone_number: formattedPhoneWithPrefix,
+              email: finalEmail || '',
+              address: finalAddress,
+              city: districtName,
+              district: districtName,
+              division: divisionName,
+              upazila: upazilaName,
+              country: countryName,
+            },
+
+            // Google Ads / GA4 Enhanced Conversions Object (user_data)
+            user_data: {
+              email: finalEmail || undefined,
+              phone_number: formattedPhoneWithPrefix,
+              address: {
+                first_name: firstName,
+                last_name: lastName,
+                street: finalAddress,
+                city: districtName || undefined,
+                region: divisionName || undefined,
+                country: 'BD',
+              }
+            },
+
+            // GA4 Standard Ecommerce Object
+            ecommerce: {
+              transaction_id: String(json.data?.order_no || ''),
+              value: Number(json.data?.grand_total || total),
+              tax: 0,
+              shipping: Number(shippingCost),
+              currency: 'BDT',
+              coupon: couponCode ? couponCode.trim() : undefined,
+              items: orderItemsPayload,
+            }
           }, {
             eventID: String(json.data?.order_no || '')
           });
@@ -497,6 +601,10 @@ export default function CheckoutPage() {
         // Clear Cart
         setCart([]);
         localStorage.removeItem('cart');
+
+        // Smoothly redirect to the thank-you / order confirmation page
+        const orderNo = json.data?.order_no || '';
+        router.push(`/order-success${orderNo ? `?order_no=${encodeURIComponent(orderNo)}` : ''}`);
       } else {
         showToast(json.message || 'Failed to place order. Please check input details.', 'error');
       }
@@ -728,14 +836,6 @@ export default function CheckoutPage() {
               <span>Order Reference: <strong className="text-slate-700">#{placedOrder.order_no}</strong></span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2 border border-slate-200 shadow-sm"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print Receipt</span>
-              </button>
               <button
                 type="button"
                 onClick={() => router.push('/')}
