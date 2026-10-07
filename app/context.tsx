@@ -64,6 +64,7 @@ export interface SystemConfig {
   address: string;
   google_map: string;
   gtm_id?: string | null;
+  fb_pixel_id?: string | null;
   marketing?: MarketingConfig;
 }
 
