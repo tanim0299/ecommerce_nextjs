@@ -337,12 +337,26 @@ export default function ProductDetailClient() {
         setProduct(normalizedProduct);
 
         // Meta Pixel & GTM ViewContent event
+        const productPrice = Number(normalizedProduct.sale_price || normalizedProduct.regular_price || 0);
         trackMetaEvent('ViewContent', {
           content_name: normalizedProduct.name,
-          content_ids: [normalizedProduct.id],
+          content_ids: [String(normalizedProduct.id)],
           content_type: 'product',
-          value: Number(normalizedProduct.sale_price || normalizedProduct.regular_price || 0),
+          value: productPrice,
           currency: 'BDT',
+          ecommerce: {
+            currency: 'BDT',
+            value: productPrice,
+            items: [
+              {
+                item_id: String(normalizedProduct.id),
+                item_name: normalizedProduct.name,
+                price: productPrice,
+                quantity: 1,
+                item_category: normalizedProduct.category?.name || (typeof (normalizedProduct as any).category_name === 'string' ? (normalizedProduct as any).category_name : undefined),
+              }
+            ]
+          }
         });
 
         // Ensure browser address bar updates to clean canonical slug path

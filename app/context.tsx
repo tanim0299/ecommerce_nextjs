@@ -55,6 +55,12 @@ export interface MarketingConfig {
   meta_keywords?: string | null;
 }
 
+export interface SocialLink {
+  platform: string;
+  name: string;
+  url: string;
+}
+
 export interface SystemConfig {
   title: string;
   logo: string;
@@ -63,6 +69,14 @@ export interface SystemConfig {
   emails: string[];
   address: string;
   google_map: string;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  youtube_url?: string | null;
+  tiktok_url?: string | null;
+  twitter_url?: string | null;
+  whatsapp_number?: string | null;
+  linkedin_url?: string | null;
+  social_links?: SocialLink[];
   gtm_id?: string | null;
   fb_pixel_id?: string | null;
   marketing?: MarketingConfig;
@@ -356,12 +370,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     triggerFlyAnimation(item.image, sourceCoords);
 
     try {
+      const itemPrice = Number(item.price) || 0;
+      const itemQty = Number(item.quantity) || 1;
+      const itemTotal = itemPrice * itemQty;
+      const variantStr = [item.size, item.colorName].filter(Boolean).join(' - ') || undefined;
+
       trackMetaEvent('AddToCart', {
         content_name: item.name,
-        content_ids: [item.id],
+        content_ids: [String(item.id)],
         content_type: 'product',
-        value: (Number(item.price) || 0) * (Number(item.quantity) || 1),
-        currency: 'BDT'
+        value: itemTotal,
+        currency: 'BDT',
+        num_items: itemQty,
+        ecommerce: {
+          currency: 'BDT',
+          value: itemTotal,
+          items: [
+            {
+              item_id: String(item.id),
+              item_name: item.name,
+              price: itemPrice,
+              quantity: itemQty,
+              item_variant: variantStr,
+              size: item.size || undefined,
+              color: item.colorName || undefined,
+            }
+          ]
+        }
       });
     } catch (e) {
       console.debug('AddToCart tracking error:', e);

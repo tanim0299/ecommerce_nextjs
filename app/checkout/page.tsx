@@ -67,11 +67,29 @@ export default function CheckoutPage() {
     if (cart && cart.length > 0) {
       try {
         const cartSubtotal = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+        const totalNumItems = cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+        const checkoutItems = cart.map(item => ({
+          item_id: String(item.id),
+          item_name: item.name,
+          price: Number(item.price) || 0,
+          quantity: Number(item.quantity) || 1,
+          item_variant: [item.size, item.colorName].filter(Boolean).join(' - ') || undefined,
+          size: item.size || undefined,
+          color: item.colorName || undefined,
+        }));
+
         trackMetaEvent('InitiateCheckout', {
           value: cartSubtotal,
           currency: 'BDT',
-          num_items: cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0),
-          content_ids: cart.map(i => i.id)
+          num_items: totalNumItems,
+          content_ids: cart.map(i => String(i.id)),
+          content_name: cart.map(i => i.name).join(', '),
+          content_type: 'product',
+          ecommerce: {
+            currency: 'BDT',
+            value: cartSubtotal,
+            items: checkoutItems
+          }
         });
       } catch (e) {
         console.debug('InitiateCheckout tracking error:', e);
@@ -496,9 +514,16 @@ export default function CheckoutPage() {
           const upazilaName = upazilas.find(u => u.id === finalUpazilaId)?.name || '';
           const countryName = countries.find(c => c.id === finalCountryId)?.name || 'Bangladesh';
 
-          const nameParts = (finalName || '').trim().split(/\s+/);
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.slice(1).join(' ') || firstName;
+          const nameParts = (finalName || '').trim().split(/\s+/).filter(Boolean);
+          let firstName = '';
+          let lastName = '';
+          if (nameParts.length === 1) {
+            firstName = nameParts[0];
+            lastName = '';
+          } else if (nameParts.length > 1) {
+            firstName = nameParts.slice(0, -1).join(' ');
+            lastName = nameParts[nameParts.length - 1];
+          }
 
           const cleanPhone = (finalPhone || '').trim();
           const formattedPhoneWithPrefix = cleanPhone.startsWith('+88')
