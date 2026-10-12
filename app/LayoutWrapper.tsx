@@ -1,12 +1,14 @@
 'use client';
 
 import GoogleTagManager from './components/GoogleTagManager';
+import SloorAssistant from './components/SloorAssistant';
 import MetaPixel from './components/MetaPixel';
 
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
+  Navigation,
   Search, 
   ShoppingBag, 
   User, 
@@ -234,6 +236,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   };
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isStoreModalOpen, setIsStoreModalOpen] = React.useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
   const [expandedItems, setExpandedItems] = React.useState<{[key: number]: boolean}>({});
   const [expandedCategories, setExpandedCategories] = React.useState<{[key: number]: boolean}>({});
@@ -493,12 +496,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
-    if (promoCode.trim().toUpperCase() === 'FABRILIFE10') {
-      setDiscountPercent(10);
-      alert('Promo code applied! You saved 10% off your purchase.');
-    } else {
-      alert('Invalid coupon code. Try "FABRILIFE10"');
+    if (!promoCode.trim()) {
+      alert('Please enter a coupon code.');
+      return;
     }
+    alert('This coupon code is not active or has expired.');
   };
 
   const handleCheckout = () => {
@@ -525,8 +527,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       );
     }
     const titleParts = systemConfig.title.split(' ');
-    const firstPart = titleParts[0] || 'FABRI';
-    const secondPart = titleParts.slice(1).join(' ') || 'LIFE';
+    const firstPart = titleParts[0] || 'STORE';
+    const secondPart = titleParts.slice(1).join(' ') || '';
     return (
       <>
         <svg viewBox="0 0 60 70" className="w-7 h-8 text-brand-orange group-hover:scale-105 transition-transform" fill="currentColor">
@@ -548,13 +550,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <MetaPixel />
       {/* Top Banner Message */}
       <div className="w-full bg-slate-950 text-white py-1 px-4 text-center text-[9.5px] font-bold uppercase tracking-wider border-b border-slate-900 flex justify-center items-center gap-4">
-        <span className="flex items-center gap-1"><Truck className="w-3 h-3 text-amber-500" /> FREE SHIPPING ON ORDERS OVER BDT 1500!</span>
+        <span className="flex items-center gap-1"><Truck className="w-3 h-3 text-amber-500" /> FAST CASH ON DELIVERY ALL OVER BANGLADESH</span>
         <span className="hidden md:inline text-slate-600">•</span>
         <span className="hidden md:flex items-center gap-1">
           <Phone className="w-3 h-3 text-amber-500" /> HOTLINE: {isConfigLoading || !systemConfig ? (
             <span className="h-2.5 w-20 shimmer-effect rounded inline-block" />
           ) : (
-            systemConfig.phones[0]
+            <a href={`tel:${systemConfig.phones[0]}`} className="hover:text-amber-400 hover:underline transition-colors">
+              {systemConfig.phones[0]}
+            </a>
           )}
         </span>
       </div>
@@ -621,15 +625,16 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500">Search</span>
             </button>
 
-            {/* Outlet Stores */}
-            <Link
-              href="/stores"
-              aria-current={pathname === '/stores' ? 'page' : undefined}
-              className={`flex flex-col items-center gap-0.5 transition-colors cursor-pointer group ${pathname === '/stores' ? 'text-brand-orange' : 'text-slate-700 hover:text-brand-orange'}`}
+            {/* Outlet Stores / Store Locator Modal */}
+            <button
+              type="button"
+              onClick={() => setIsStoreModalOpen(true)}
+              className="flex flex-col items-center gap-0.5 transition-colors cursor-pointer group text-slate-700 hover:text-brand-orange"
+              title="Store Locator"
             >
               <MapPin className="w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform" />
-              <span className={`text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${pathname === '/stores' ? 'text-brand-orange' : 'text-slate-500'}`}>Stores</span>
-            </Link>
+              <span className="text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 text-slate-500">Stores</span>
+            </button>
 
             {/* Profile */}
             <Link 
@@ -814,6 +819,14 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   </div>
                 );
               })}
+            <button
+              type="button"
+              onClick={() => setIsStoreModalOpen(true)}
+              className="flex items-center gap-1.5 py-1.5 transition-colors hover:text-brand-orange cursor-pointer"
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Store Locator
+            </button>
             <Link
               href="/track-order"
               aria-current={pathname === '/track-order' ? 'page' : undefined}
@@ -838,24 +851,75 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 text-sm">
           {/* Brand Info */}
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
+            <Link href="/" className="inline-flex items-center gap-2 hover:opacity-90 transition-opacity w-fit">
               {renderLogo(true)}
-            </div>
+            </Link>
             <p className="text-slate-400 font-light leading-relaxed">
               Premium clothing e-commerce retail store. Experience the finest combed cotton fabrics, refined tailoring, and modern designs for your everyday lifestyle.
             </p>
-            {/* Social Links */}
-            <div className="flex items-center gap-3 mt-2">
-              {['Facebook', 'Instagram', 'Twitter', 'YouTube'].map((social) => (
-                <button
-                  key={social}
-                  className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 hover:border-brand-orange hover:text-brand-orange text-slate-400 flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
-                  title={social}
-                >
-                  <span className="text-[10px] font-bold">{social[0]}</span>
-                </button>
-              ))}
-            </div>
+            {/* Dynamic Social Links */}
+            {systemConfig?.social_links && systemConfig.social_links.length > 0 && (
+              <div className="flex items-center gap-2.5 mt-3 flex-wrap">
+                {systemConfig.social_links.map((social) => {
+                  const getIcon = (name: string) => {
+                    switch (name.toLowerCase()) {
+                      case 'facebook':
+                        return (
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                          </svg>
+                        );
+                      case 'instagram':
+                        return (
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                          </svg>
+                        );
+                      case 'youtube':
+                        return (
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                          </svg>
+                        );
+                      case 'tiktok':
+                        return (
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                            <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 2.89 3.5 2.77 1.81-.03 3.32-1.48 3.42-3.29.09-2.31.06-4.63.06-6.95.01-4.52-.02-9.04.03-13.56z"/>
+                          </svg>
+                        );
+                      case 'twitter':
+                        return (
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                          </svg>
+                        );
+                      case 'whatsapp':
+                        return (
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+                          </svg>
+                        );
+                      default:
+                        return <span className="text-[11px] font-black">{social.platform[0]}</span>;
+                    }
+                  };
+
+                  return (
+                    <a
+                      key={social.platform}
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 hover:border-brand-orange hover:text-brand-orange text-slate-400 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer shadow-sm hover:shadow-brand-orange/20"
+                      title={social.platform}
+                      aria-label={social.platform}
+                    >
+                      {getIcon(social.name)}
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Quick Collections */}
@@ -918,6 +982,16 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <Link href="/track-order" className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
                 Track Your Order
               </Link>
+              <Link href="/contact" className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
+                Contact Us
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsStoreModalOpen(true)}
+                className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+              >
+                Store Locator
+              </button>
             </div>
           </div>
 
@@ -953,53 +1027,177 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               ) : (
                 <>
                   {systemConfig.phones && systemConfig.phones.length > 0 && (
-                    <span>Helpline: {systemConfig.phones.join(', ')}</span>
+                    <span>
+                      Helpline:{' ' }
+                      {systemConfig.phones.map((phone, idx) => (
+                        <React.Fragment key={idx}>
+                          {idx > 0 && ', '}
+                          <a href={`tel:${phone.trim()}`} className="hover:text-amber-400 hover:underline transition-colors">
+                            {phone}
+                          </a>
+                        </React.Fragment>
+                      ))}
+                    </span>
                   )}
                   {systemConfig.emails && systemConfig.emails.length > 0 && (
-                    <span>Email: {systemConfig.emails.join(', ')}</span>
+                    <span>
+                      Email:{' ' }
+                      {systemConfig.emails.map((email, idx) => (
+                        <React.Fragment key={idx}>
+                          {idx > 0 && ', '}
+                          <a href={`mailto:${email.trim()}`} className="hover:text-amber-400 hover:underline transition-colors">
+                            {email}
+                          </a>
+                        </React.Fragment>
+                      ))}
+                    </span>
                   )}
                   {systemConfig.address && (
                     <span>Address: {systemConfig.address}</span>
                   )}
-                  {systemConfig.google_map && (
-                    <a 
-                      href={systemConfig.google_map} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="inline-flex items-center gap-1 text-brand-orange hover:text-orange-400 font-bold transition-colors mt-1"
-                    >
-                      <MapPin className="w-3.5 h-3.5" /> View Google Map
-                    </a>
-                  )}
+                  <button 
+                    type="button"
+                    onClick={() => setIsStoreModalOpen(true)}
+                    className="inline-flex items-center gap-1 text-brand-orange hover:text-orange-400 font-bold transition-colors mt-1.5 cursor-pointer text-left"
+                  >
+                    <MapPin className="w-3.5 h-3.5" /> Store Locator (Live Map) &rarr;
+                  </button>
                 </>
               )}
             </div>
           </div>
         </div>
 
-        {/* Divider line */}
-        <div className="max-w-7xl mx-auto border-t border-slate-900 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium">
-          <div>
-            {isConfigLoading || !systemConfig ? (
-              <div className="h-3.5 w-64 shimmer-effect rounded" />
-            ) : (
-              `© 2026 ${systemConfig.title}. All rights reserved. ${systemConfig.address || 'Dhaka, Bangladesh'}.`
-            )}
-          </div>
-          
-          {/* Payment Partners */}
-          <div className="flex items-center gap-4 opacity-50 hover:opacity-85 transition-opacity duration-300">
-            {['bKash', 'Nagad', 'Rocket', 'Visa', 'Mastercard'].map((pay) => (
-              <span
-                key={pay}
-                className="bg-slate-900 border border-slate-800 text-[10px] font-black px-2 py-1 rounded text-white tracking-wider"
+        
+      </footer>
+
+
+      {/* Store Locator Map Modal */}
+      {isStoreModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in"
+          onClick={() => setIsStoreModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden border border-slate-150 flex flex-col max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-brand-orange/10 text-brand-orange flex items-center justify-center">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-tight">
+                    Store Locator
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-semibold truncate max-w-xs sm:max-w-md">
+                    {systemConfig?.title || 'Our Official Outlet'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsStoreModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close modal"
               >
-                {pay}
-              </span>
-            ))}
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Map View */}
+            <div className="w-full h-[320px] sm:h-[400px] bg-slate-100 relative">
+              {(() => {
+                let mapUrl = null;
+                if (systemConfig?.google_map) {
+                  const match = systemConfig.google_map.match(/src=["']([^"']+)["']/i);
+                  if (match && match[1]) mapUrl = match[1];
+                  else if (systemConfig.google_map.startsWith('http')) mapUrl = systemConfig.google_map;
+                }
+                if (!mapUrl && systemConfig?.address) {
+                  mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(systemConfig.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+                }
+
+                if (mapUrl) {
+                  return (
+                    <iframe
+                      src={mapUrl}
+                      title="Store Location"
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="w-full h-full"
+                    />
+                  );
+                }
+
+                return (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-2 p-6 text-center">
+                    <MapPin className="w-10 h-10 text-slate-300" />
+                    <p className="text-xs font-semibold">Store map coordinates not configured.</p>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Store Info & Quick Actions Footer */}
+            <div className="p-4 sm:p-6 bg-white border-t border-slate-100 flex flex-col gap-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-brand-orange shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                      Store Address
+                    </span>
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                      {systemConfig?.address || 'Dhaka, Bangladesh'}
+                    </p>
+                  </div>
+                </div>
+
+                {systemConfig?.phones && systemConfig.phones.length > 0 && (
+                  <div className="sm:text-right pl-6 sm:pl-0">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                      Helpline
+                    </span>
+                    <a
+                      href={`tel:${systemConfig.phones[0].replace(/\s/g, '')}`}
+                      className="text-xs sm:text-sm font-black text-brand-orange hover:underline"
+                    >
+                      {systemConfig.phones[0]}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                {systemConfig?.address && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(systemConfig.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider transition-all inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Navigation className="w-3.5 h-3.5" /> Directions
+                  </a>
+                )}
+                <Link
+                  href="/contact"
+                  onClick={() => setIsStoreModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 hover:border-brand-orange hover:text-brand-orange text-slate-700 text-xs font-bold uppercase transition-all"
+                >
+                  Full Contact Page &rarr;
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
-      </footer>
+      )}
 
       {/* Fixed Floating Cart Button on Right Side */}
       <button
@@ -1336,7 +1534,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <form onSubmit={handleApplyCoupon} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Promo Code (FABRILIFE10)"
+                  placeholder="Coupon Code"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value)}
                   className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 uppercase placeholder-slate-400"
@@ -1411,13 +1609,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <div className={`absolute top-0 bottom-0 left-0 w-80 max-w-[85vw] bg-white shadow-2xl flex flex-col transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           {/* Drawer Header */}
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-            <div className="flex items-center gap-2">
+            <Link 
+              href="/" 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
+            >
               {systemConfig?.logo ? (
                 <img src={systemConfig.logo} alt={systemConfig.title} className="h-10 w-auto max-w-[170px] object-contain" />
               ) : (
-                <span className="font-extrabold text-slate-950 text-base tracking-tighter">{systemConfig?.title || 'BELIEVERS'}</span>
+                <span className="font-extrabold text-slate-950 text-base tracking-tighter">{systemConfig?.title || 'STORE'}</span>
               )}
-            </div>
+            </Link>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
               className="text-slate-400 hover:text-slate-950 p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-all cursor-pointer"
@@ -1571,6 +1773,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           </div>
         </div>
       </div>
+
+      {/* Sloor AI Shopping Assistant */}
+      <SloorAssistant />
     </div>
   );
 }

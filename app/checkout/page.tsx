@@ -2,6 +2,7 @@
 import { trackMetaEvent } from '../utils/pixel';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingBag,
@@ -67,11 +68,29 @@ export default function CheckoutPage() {
     if (cart && cart.length > 0) {
       try {
         const cartSubtotal = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+        const totalNumItems = cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+        const checkoutItems = cart.map(item => ({
+          item_id: String(item.id),
+          item_name: item.name,
+          price: Number(item.price) || 0,
+          quantity: Number(item.quantity) || 1,
+          item_variant: [item.size, item.colorName].filter(Boolean).join(' - ') || undefined,
+          size: item.size || undefined,
+          color: item.colorName || undefined,
+        }));
+
         trackMetaEvent('InitiateCheckout', {
           value: cartSubtotal,
           currency: 'BDT',
-          num_items: cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0),
-          content_ids: cart.map(i => i.id)
+          num_items: totalNumItems,
+          content_ids: cart.map(i => String(i.id)),
+          content_name: cart.map(i => i.name).join(', '),
+          content_type: 'product',
+          ecommerce: {
+            currency: 'BDT',
+            value: cartSubtotal,
+            items: checkoutItems
+          }
         });
       } catch (e) {
         console.debug('InitiateCheckout tracking error:', e);
@@ -235,7 +254,29 @@ export default function CheckoutPage() {
       }
     }
 
-    // 3. Known famous Dhaka neighborhoods/sub-areas -> auto map to Dhaka district
+    // 2b. Multi-name slash parser helper for districts & upazilas
+    if (!matchedDistrict) {
+      for (const d of districts) {
+        if (!d.name) continue;
+        const subNames = d.name.toLowerCase().split(/[/|,()-]+/).map(s => s.trim()).filter(Boolean);
+        for (const sn of subNames) {
+          if (sn.length >= 3 && (norm.includes(sn) || words.includes(sn))) {
+            matchedDistrict = d;
+            break;
+          }
+        }
+        if (matchedDistrict) break;
+      }
+    }
+
+    // 3. Known famous Dhaka & Chittagong neighborhoods/sub-areas -> auto map to district
+    const chittagongAreas = [
+      'chittagong', 'chattogram', 'chattagram', 'ctg', 'agrabad', 'gec', 'nasirabad',
+      'halishahar', 'khulshi', 'panchlaish', 'patenga', 'muradpur', 'bahaddarhat',
+      'chawkbazar', 'kotwali', 'chandgaon', 'pahartali', 'akbar shah', 'bakalia',
+      'bayezid', 'epz', 'karnafuli', 'আগ্রাবাদ', 'জিইসি', 'নাসিরাবাদ', 'হালিশহর',
+      'চট্টগ্রাম', 'চিটাগাং', 'খুলশী', 'পাঁচলাইশ', 'পতেঙ্গা', 'মুরাদপুর', 'বহদ্দারহাট', 'চকবাজার'
+    ];
     const dhakaAreas = [
       'dhanmondi', 'mirpur', 'gulshan', 'banani', 'uttara', 'motijheel', 'mohammadpur',
       'badda', 'bashundhara', 'rampura', 'jatrabari', 'old dhaka', 'puran dhaka', 'farmgate',
@@ -249,6 +290,22 @@ export default function CheckoutPage() {
         if (norm.includes(area) || billingAddress.includes(area)) {
           matchedDistrict = districts.find(d => (d.name || '').toLowerCase() === 'dhaka') || null;
           // Also set as upazila label if suitable
+          if (!matchedUpazila) {
+            const foundThana = upazilas.find(u => (u.name || '').toLowerCase().includes(area));
+            if (foundThana) matchedUpazila = foundThana;
+          }
+          break;
+        }
+      }
+    }
+
+    if (!matchedDistrict) {
+      for (const area of chittagongAreas) {
+        if (norm.includes(area) || billingAddress.includes(area)) {
+          matchedDistrict = districts.find(d => {
+            const dn = (d.name || '').toLowerCase();
+            return dn.includes('chitta') || dn.includes('chatta') || dn.includes('chatto');
+          }) || null;
           if (!matchedUpazila) {
             const foundThana = upazilas.find(u => (u.name || '').toLowerCase().includes(area));
             if (foundThana) matchedUpazila = foundThana;
@@ -376,12 +433,11 @@ export default function CheckoutPage() {
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
-    if (couponCode.trim().toUpperCase() === 'FABRILIFE10') {
-      setDiscountPercent(10);
-      showToast('Promo code applied! 10% discount added.', 'success');
-    } else {
-      showToast('Invalid coupon code. Try "FABRILIFE10"', 'error');
+    if (!couponCode.trim()) {
+      showToast('Please enter a coupon code.', 'error');
+      return;
     }
+    showToast('This coupon code is not active or has expired.', 'error');
   };
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
@@ -496,9 +552,16 @@ export default function CheckoutPage() {
           const upazilaName = upazilas.find(u => u.id === finalUpazilaId)?.name || '';
           const countryName = countries.find(c => c.id === finalCountryId)?.name || 'Bangladesh';
 
-          const nameParts = (finalName || '').trim().split(/\s+/);
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.slice(1).join(' ') || firstName;
+          const nameParts = (finalName || '').trim().split(/\s+/).filter(Boolean);
+          let firstName = '';
+          let lastName = '';
+          if (nameParts.length === 1) {
+            firstName = nameParts[0];
+            lastName = '';
+          } else if (nameParts.length > 1) {
+            firstName = nameParts.slice(0, -1).join(' ');
+            lastName = nameParts[nameParts.length - 1];
+          }
 
           const cleanPhone = (finalPhone || '').trim();
           const formattedPhoneWithPrefix = cleanPhone.startsWith('+88')
@@ -680,11 +743,13 @@ export default function CheckoutPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-slate-100 gap-4">
             <div>
-              {systemConfig?.logo ? (
-                <img src={systemConfig.logo} alt={systemConfig.title || 'Logo'} className="h-10 w-auto max-w-[180px] object-contain" />
-              ) : (
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">{systemConfig?.title || 'CLOTHING STORE'}</h2>
-              )}
+              <Link href="/" className="inline-block hover:opacity-90 transition-opacity">
+                {systemConfig?.logo ? (
+                  <img src={systemConfig.logo} alt={systemConfig.title || 'Logo'} className="h-10 w-auto max-w-[180px] object-contain" />
+                ) : (
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{systemConfig?.title || 'CLOTHING STORE'}</h2>
+                )}
+              </Link>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Official Order Confirmation Receipt</p>
             </div>
             <div className="text-left sm:text-right">
@@ -707,12 +772,16 @@ export default function CheckoutPage() {
               <h4 className="font-extrabold text-sm text-slate-900">{placedOrder.name}</h4>
               <p className="text-xs text-slate-600 font-semibold flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5 text-slate-400" />
-                {placedOrder.phone}
+                <a href={`tel:${placedOrder.phone}`} className="hover:text-brand-orange hover:underline">
+                  {placedOrder.phone}
+                </a>
               </p>
               {placedOrder.email && (
                 <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  {placedOrder.email}
+                  <a href={`mailto:${placedOrder.email}`} className="hover:text-brand-orange hover:underline">
+                    {placedOrder.email}
+                  </a>
                 </p>
               )}
               <p className="text-xs text-slate-700 font-semibold leading-relaxed mt-1.5 bg-white p-2.5 rounded-lg border border-slate-100">

@@ -293,7 +293,7 @@ export default function ProfilePage() {
 
   // Load real orders from backend supporting pagination layout
   useEffect(() => {
-    if (activeTab === 'orders') {
+    if (activeTab === 'orders' || activeTab === 'overview') {
       const fetchProfileOrders = async () => {
         setIsOrdersLoading(true);
         try {
@@ -776,13 +776,7 @@ export default function ProfilePage() {
       </div>
     );
   }
-
-  const mockReviews = [
-    { id: 1, productName: 'SABR Contrast T-Shirt', rating: 5, date: 'July 24, 2026', comment: 'Quality of the fabric is top notch. Highly recommended.' },
-    { id: 2, productName: 'TAWAKKUL Classic Tee', rating: 4, date: 'June 18, 2026', comment: 'Very comfortable for daily wear. Color fits perfectly.' }
-  ];
-
-  return (
+return (
     <div className="w-full py-8 max-w-7xl mx-auto px-4">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
@@ -936,7 +930,7 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wide">Total Orders</span>
-                      <span className="text-base font-black text-slate-800">1 Order</span>
+                      <span className="text-base font-black text-slate-800">{profileOrders.length} {profileOrders.length === 1 ? 'Order' : 'Orders'}</span>
                     </div>
                   </div>
 
@@ -983,11 +977,23 @@ export default function ProfilePage() {
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-3">
                         <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        <span className="text-xs text-slate-700 font-bold truncate">{user.email || 'Not set'}</span>
+                        <span className="text-xs text-slate-700 font-bold truncate">
+                          {user.email ? (
+                            <a href={`mailto:${user.email}`} className="hover:text-brand-orange hover:underline">
+                              {user.email}
+                            </a>
+                          ) : 'Not set'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        <span className="text-xs text-slate-700 font-bold">{user.phone || 'Not set'}</span>
+                        <span className="text-xs text-slate-700 font-bold">
+                          {user.phone ? (
+                            <a href={`tel:${user.phone}`} className="hover:text-brand-orange hover:underline">
+                              {user.phone}
+                            </a>
+                          ) : 'Not set'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -998,16 +1004,39 @@ export default function ProfilePage() {
 
                   <div className="flex flex-col gap-4">
                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">Recent Order</h3>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col gap-3">
-                      <div className="flex justify-between items-center">
-                        <span className="font-extrabold text-slate-900 text-xs">#FL-2026-8910</span>
-                        <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded font-black text-[9px] uppercase">Processing</span>
+                    {profileOrders.length > 0 ? (
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <span className="font-extrabold text-slate-900 text-xs">#{profileOrders[0].order_no}</span>
+                          <span className="px-2 py-0.5 bg-orange-100 text-brand-orange rounded font-black text-[9px] uppercase">
+                            {profileOrders[0].order_status || profileOrders[0].status || 'Pending'}
+                          </span>
+                        </div>
+                        <div className="border-t border-slate-200/60 pt-3 flex justify-between items-center text-xs">
+                          <span className="text-slate-500 font-semibold">
+                            {profileOrders[0].items?.length || 1} Item(s)
+                          </span>
+                          <span className="font-bold text-slate-900">BDT {profileOrders[0].grand_total}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedOrderDetail(profileOrders[0]);
+                            setActiveTab('orders');
+                          }}
+                          className="text-left text-[11px] font-bold text-brand-orange hover:underline cursor-pointer pt-1"
+                        >
+                          View Order &rarr;
+                        </button>
                       </div>
-                      <div className="border-t border-slate-200/60 pt-3 flex justify-between items-center text-xs">
-                        <span className="text-slate-500 font-semibold">1x Musafir Raglan Tee</span>
-                        <span className="font-bold text-slate-900">BDT 950</span>
+                    ) : (
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+                        <p className="text-xs text-slate-400 font-medium">No orders placed yet.</p>
+                        <Link href="/shop" className="text-[11px] font-bold text-brand-orange hover:underline mt-1 inline-block">
+                          Explore Catalog &rarr;
+                        </Link>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1284,7 +1313,11 @@ export default function ProfilePage() {
                             <div className="flex flex-col gap-1.5">
                               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{addr.title}</span>
                               <h4 className="text-xs font-extrabold text-slate-900">{addr.name}</h4>
-                              <p className="text-xs text-slate-500 font-semibold">{addr.phone}</p>
+                              {addr.phone ? (
+                                <a href={`tel:${addr.phone}`} className="text-xs text-slate-500 hover:text-brand-orange hover:underline font-semibold w-fit">
+                                  {addr.phone}
+                                </a>
+                              ) : null}
                               <p className="text-xs text-slate-700 font-bold leading-normal mt-1">
                                 {addr.address}
                                 {(addr.upazila?.name || addr.district?.name) && (

@@ -18,66 +18,6 @@ import { useApp, getProductUrl } from './context';
 import ProductQuickView from './components/ProductQuickView';
 import WatchBeforeBuyModal from './components/WatchBeforeBuyModal';
 
-export const TOP_CATEGORIES = [
-  { name: "Premium Panjabi", image: "/categories/cat1.jpg", count: "45 Items" },
-  { name: "Polo Shirts", image: "/categories/cat2.jpg", count: "68 Items" },
-  { name: "Graphic Tees", image: "/categories/cat3.jpg", count: "124 Items" },
-  { name: "Casual Shirts", image: "/categories/cat4.jpg", count: "39 Items" },
-  { name: "Chino Pants", image: "/categories/cat5.jpg", count: "52 Items" },
-  { name: "Activewear", image: "/categories/cat6.jpg", count: "30 Items" },
-  { name: "Winter Jackets", image: "/categories/cat7.jpg", count: "18 Items" },
-  { name: "Premium Shoes", image: "/categories/cat8.jpg", count: "25 Items" },
-  { name: "Accessories", image: "/categories/cat9.jpg", count: "14 Items" }
-];
-
-export const TSHIRT_PRODUCTS = [
-  { id: 1, name: "SABR Contrast T-Shirt", price: "990", originalPrice: "1250", image: "/products/prod1.jpg", tag: "Hot", rating: "4.8", discount: "20%" },
-  { id: 2, name: "TAWAKKUL Classic Tee", price: "890", originalPrice: "1100", image: "/products/prod2.jpg", tag: "Premium", rating: "4.9", discount: "19%" },
-  { id: 3, name: "MUSAFIR Raglan Sleeve", price: "950", originalPrice: "1200", image: "/products/prod3.jpg", tag: "New", rating: "4.7", discount: "21%" },
-  { id: 4, name: "Minimalist Combed Tee", price: "850", originalPrice: "990", image: "/products/prod4.jpg", tag: "Best Seller", rating: "5.0", discount: "14%" },
-  { id: 5, name: "Vintage Wash Tee", price: "1050", originalPrice: "1350", image: "/products/prod5.jpg", tag: "Vintage", rating: "4.6", discount: "22%" },
-  { id: 6, name: "Athletic Premium Tee", price: "990", originalPrice: "1250", image: "/products/prod6.jpg", tag: "Sports", rating: "4.9", discount: "20%" },
-  { id: 7, name: "Urban Streetwear Tee", price: "1150", originalPrice: "1490", image: "/products/prod7.jpg", tag: "Trending", rating: "4.8", discount: "22%" },
-  { id: 8, name: "Heritage Crewneck Tee", price: "950", originalPrice: "1190", image: "/products/prod8.jpg", tag: "Classic", rating: "4.7", discount: "20%" },
-  { id: 9, name: "Luxe Combed Cotton Tee", price: "1200", originalPrice: "1500", image: "/products/prod9.jpg", tag: "Luxury", rating: "5.0", discount: "20%" }
-];
-
-export const TSHIRT_PRODUCTS_SHUFFLED_1 = [
-  { id: 4, name: "Minimalist Combed Tee", price: "850", originalPrice: "990", image: "/products/prod4.jpg", tag: "Best Seller", rating: "5.0", discount: "14%" },
-  { id: 1, name: "SABR Contrast T-Shirt", price: "990", originalPrice: "1250", image: "/products/prod1.jpg", tag: "Hot", rating: "4.8", discount: "20%" },
-  { id: 9, name: "Luxe Combed Cotton Tee", price: "1200", originalPrice: "1500", image: "/products/prod9.jpg", tag: "Luxury", rating: "5.0", discount: "20%" },
-  { id: 2, name: "TAWAKKUL Classic Tee", price: "890", originalPrice: "1100", image: "/products/prod2.jpg", tag: "Premium", rating: "4.9", discount: "19%" },
-  { id: 7, name: "Urban Streetwear Tee", price: "1150", originalPrice: "1490", image: "/products/prod7.jpg", tag: "Trending", rating: "4.8", discount: "22%" },
-  { id: 5, name: "Vintage Wash Tee", price: "1050", originalPrice: "1350", image: "/products/prod5.jpg", tag: "Vintage", rating: "4.6", discount: "22%" },
-  { id: 3, name: "MUSAFIR Raglan Sleeve", price: "950", originalPrice: "1200", image: "/products/prod3.jpg", tag: "New", rating: "4.7", discount: "21%" },
-  { id: 8, name: "Heritage Crewneck Tee", price: "950", originalPrice: "1190", image: "/products/prod8.jpg", tag: "Classic", rating: "4.7", discount: "20%" },
-  { id: 6, name: "Athletic Premium Tee", price: "990", originalPrice: "1250", image: "/products/prod6.jpg", tag: "Sports", rating: "4.9", discount: "20%" }
-];
-
-export const TSHIRT_PRODUCTS_SHUFFLED_2 = [
-  { id: 7, name: "Urban Streetwear Tee", price: "1150", originalPrice: "1490", image: "/products/prod7.jpg", tag: "Trending", rating: "4.8", discount: "22%" },
-  { id: 3, name: "MUSAFIR Raglan Sleeve", price: "950", originalPrice: "1200", image: "/products/prod3.jpg", tag: "New", rating: "4.7", discount: "21%" },
-  { id: 8, name: "Heritage Crewneck Tee", price: "950", originalPrice: "1190", image: "/products/prod8.jpg", tag: "Classic", rating: "4.7", discount: "20%" },
-  { id: 1, name: "SABR Contrast T-Shirt", price: "990", originalPrice: "1250", image: "/products/prod1.jpg", tag: "Hot", rating: "4.8", discount: "20%" },
-  { id: 6, name: "Athletic Premium Tee", price: "990", originalPrice: "1250", image: "/products/prod6.jpg", tag: "Sports", rating: "4.9", discount: "20%" },
-  { id: 9, name: "Luxe Combed Cotton Tee", price: "1200", originalPrice: "1500", image: "/products/prod9.jpg", tag: "Luxury", rating: "5.0", discount: "20%" },
-  { id: 4, name: "Minimalist Combed Tee", price: "850", originalPrice: "990", image: "/products/prod4.jpg", tag: "Best Seller", rating: "5.0", discount: "14%" },
-  { id: 5, name: "Vintage Wash Tee", price: "1050", originalPrice: "1350", image: "/products/prod5.jpg", tag: "Vintage", rating: "4.6", discount: "22%" },
-  { id: 2, name: "TAWAKKUL Classic Tee", price: "890", originalPrice: "1100", image: "/products/prod2.jpg", tag: "Premium", rating: "4.9", discount: "19%" }
-];
-
-export const TSHIRT_PRODUCTS_SHUFFLED_3 = [
-  { id: 2, name: "TAWAKKUL Classic Tee", price: "890", originalPrice: "1100", image: "/products/prod2.jpg", tag: "Premium", rating: "4.9", discount: "19%" },
-  { id: 9, name: "Luxe Combed Cotton Tee", price: "1200", originalPrice: "1500", image: "/products/prod9.jpg", tag: "Luxury", rating: "5.0", discount: "20%" },
-  { id: 5, name: "Vintage Wash Tee", price: "1050", originalPrice: "1350", image: "/products/prod5.jpg", tag: "Vintage", rating: "4.6", discount: "22%" },
-  { id: 8, name: "Heritage Crewneck Tee", price: "950", originalPrice: "1190", image: "/products/prod8.jpg", tag: "Classic", rating: "4.7", discount: "20%" },
-  { id: 1, name: "SABR Contrast T-Shirt", price: "990", originalPrice: "1250", image: "/products/prod1.jpg", tag: "Hot", rating: "4.8", discount: "20%" },
-  { id: 7, name: "Urban Streetwear Tee", price: "1150", originalPrice: "1490", image: "/products/prod7.jpg", tag: "Trending", rating: "4.8", discount: "22%" },
-  { id: 4, name: "Minimalist Combed Tee", price: "850", originalPrice: "990", image: "/products/prod4.jpg", tag: "Best Seller", rating: "5.0", discount: "14%" },
-  { id: 6, name: "Athletic Premium Tee", price: "990", originalPrice: "1250", image: "/products/prod6.jpg", tag: "Sports", rating: "4.9", discount: "20%" },
-  { id: 3, name: "MUSAFIR Raglan Sleeve", price: "950", originalPrice: "1200", image: "/products/prod3.jpg", tag: "New", rating: "4.7", discount: "21%" }
-];
-
 interface SliderItem {
   id: number;
   sl: number;
@@ -424,9 +364,9 @@ export default function Home() {
       <div
         key={prod.id || idx}
         className={`${isSliderCard
-          ? 'w-[220px] sm:w-[240px] md:w-[270px] shrink-0 snap-start'
+          ? 'w-full sm:w-[240px] md:w-[270px] sm:shrink-0 sm:snap-start'
           : 'w-full min-w-0'
-          } bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-amber-500/40 shadow-xs hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 flex flex-col group relative`}
+          } bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-amber-500/40 shadow-xs hover:shadow-2xl transition-all duration-300 sm:hover:-translate-y-2 flex flex-col group relative`}
       >
         <button
           onClick={(e) => {
@@ -434,10 +374,10 @@ export default function Home() {
             e.preventDefault();
             handleToggleWishlist(prod.id.toString());
           }}
-          className="absolute top-3.5 right-3.5 z-25 w-8 h-8 rounded-full bg-white/85 backdrop-blur-md flex items-center justify-center border border-white/20 hover:scale-105 active:scale-95 transition-all duration-300 shadow-sm hover:shadow group/heart cursor-pointer"
+          className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-25 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center border border-white/20 hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xs hover:shadow-sm group/heart cursor-pointer"
         >
           <Heart
-            className={`w-4 h-4 transition-all duration-300 ${isLiked
+            className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-all duration-300 ${isLiked
                 ? 'fill-rose-500 text-rose-500 scale-110'
                 : 'text-slate-600 group-hover/heart:text-rose-500'
               }`}
@@ -451,7 +391,7 @@ export default function Home() {
             event.preventDefault();
             setQuickViewProductId(prod.id);
           }}
-          className="absolute right-12 top-3.5 z-30 flex h-8 items-center gap-1.5 rounded-full bg-slate-950/90 px-2.5 text-[9px] font-black uppercase tracking-wider text-white opacity-100 shadow-lg transition-all duration-300 hover:bg-brand-orange md:opacity-0 md:group-hover:opacity-100"
+          className="absolute right-10.5 top-2.5 sm:right-12 sm:top-3.5 z-30 flex h-7 w-7 sm:h-8 sm:w-auto items-center justify-center sm:justify-start gap-1.5 rounded-full bg-slate-950/85 sm:bg-slate-950/90 sm:px-2.5 text-[9px] font-black uppercase tracking-wider text-white shadow-md transition-all duration-300 hover:bg-brand-orange md:opacity-0 md:group-hover:opacity-100"
           aria-label={`Quick view ${prod.name || 'product'}`}
         >
           <Eye className="h-3.5 w-3.5" />
@@ -460,9 +400,9 @@ export default function Home() {
 
         <Link href={getProductUrl(prod)} className="flex flex-col flex-1">
           <div className="relative aspect-square overflow-hidden bg-slate-50 flex items-center justify-center">
-            <div className="absolute top-3.5 left-3.5 z-20 flex flex-col gap-1.5 items-start">
+            <div className="absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-20 flex flex-col gap-1.5 items-start">
               {savingAmount !== null && (
-                <span className="px-2 py-0.5 text-[9px] font-bold bg-rose-500 text-white rounded-md shadow-sm">
+                <span className="px-1.5 py-0.5 sm:px-2 text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-rose-500 text-white rounded-md shadow-xs">
                   BDT {savingAmount} OFF
                 </span>
               )}
@@ -470,7 +410,7 @@ export default function Home() {
 
             {prod.stock_status === 'out_of_stock' && (
               <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-30 pointer-events-none">
-                <span className="px-4 py-2 text-xs font-black uppercase tracking-wider bg-rose-600/90 text-white rounded-xl shadow-lg border border-rose-500/25">
+                <span className="px-3 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider bg-rose-600/90 text-white rounded-xl shadow-lg border border-rose-500/25">
                   Out of Stock
                 </span>
               </div>
@@ -480,18 +420,18 @@ export default function Home() {
               <img
                 src={resolveImageUrl(primaryImage)}
                 alt={prod.name || 'Product'}
-                className={`w-full h-full object-contain p-2 transition-all duration-500 group-hover:scale-[1.03] ${hoverImage ? 'group-hover:opacity-0' : ''} ${prod.stock_status === 'out_of_stock' ? 'opacity-50' : ''}`}
+                className={`w-full h-full object-contain p-2 sm:p-2.5 transition-all duration-500 group-hover:scale-[1.03] ${hoverImage ? 'group-hover:opacity-0' : ''} ${prod.stock_status === 'out_of_stock' ? 'opacity-50' : ''}`}
               />
             )}
             {hoverImage && (
               <img
                 src={resolveImageUrl(hoverImage)}
                 alt={prod.name ? `${prod.name} alternate view` : 'Product alternate view'}
-                className={`absolute inset-0 w-full h-full object-contain p-2 opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-[1.03] ${prod.stock_status === 'out_of_stock' ? 'opacity-50' : ''}`}
+                className={`absolute inset-0 w-full h-full object-contain p-2 sm:p-2.5 opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-[1.03] ${prod.stock_status === 'out_of_stock' ? 'opacity-50' : ''}`}
               />
             )}
 
-            <div className="absolute inset-0 bg-black/10 group-hover:bg-black/25 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center p-4 z-20">
+            <div className="hidden sm:flex absolute inset-0 bg-black/10 group-hover:bg-black/25 opacity-0 group-hover:opacity-100 transition-all duration-300 items-end justify-center p-4 z-20">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -519,30 +459,56 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="p-3 flex flex-col gap-1.5 bg-white flex-1 justify-between">
+          <div className="p-2.5 sm:p-3 flex flex-col gap-1 sm:gap-1.5 bg-white flex-1 justify-between">
             <div className="flex flex-col gap-0.5">
               {prod.brand?.name && (
-                <span className="text-[8.5px] font-extrabold uppercase tracking-widest text-slate-400">
+                <span className="text-[8px] sm:text-[8.5px] font-extrabold uppercase tracking-widest text-slate-400">
                   {prod.brand.name}
                 </span>
               )}
-              <h3 className="text-xs font-bold text-slate-900 group-hover:text-amber-500 transition-colors duration-300 line-clamp-1">
+              <h3 className="text-[11.5px] sm:text-xs font-bold text-slate-900 group-hover:text-amber-500 transition-colors duration-300 line-clamp-1">
                 {prod.name}
               </h3>
             </div>
 
-            {displayedPrice !== null && (
-              <div className="flex items-baseline gap-1.5 mt-0.5">
-                {hasDiscount && regularPrice !== null && (
-                  <span className="text-[10px] font-bold text-slate-400 line-through">
-                    BDT {regularPrice}
+            <div className="flex items-end justify-between gap-1 mt-auto pt-1">
+              {displayedPrice !== null && (
+                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 min-w-0">
+                  <span className="text-xs sm:text-[13px] font-black text-slate-950 whitespace-nowrap">
+                    BDT {displayedPrice}
                   </span>
-                )}
-                <span className="text-xs font-black text-slate-950">
-                  BDT {displayedPrice}
-                </span>
-              </div>
-            )}
+                  {hasDiscount && regularPrice !== null && (
+                    <span className="text-[9.5px] sm:text-[10px] font-bold text-slate-400 line-through whitespace-nowrap">
+                      BDT {regularPrice}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Mobile Quick Add To Basket Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (prod.stock_status === 'out_of_stock') return;
+                  if (hasVariants) {
+                    router.push(getProductUrl(prod));
+                  } else {
+                    handleQuickAddToCart({
+                      ...prod,
+                      price: displayedPrice ?? 0,
+                      image: primaryImage ? resolveImageUrl(primaryImage) : ''
+                    }, e);
+                  }
+                }}
+                disabled={prod.stock_status === 'out_of_stock'}
+                className="sm:hidden w-7 h-7 rounded-full bg-slate-950 text-white flex items-center justify-center hover:bg-brand-orange active:scale-90 transition-all shrink-0 cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed shadow-2xs ml-auto"
+                aria-label="Add to cart"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </Link>
       </div>
@@ -953,31 +919,41 @@ export default function Home() {
                     </h2>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        const el = document.getElementById(`home-section-slider-${section.id}`);
-                        if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
-                      }}
-                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/shop"
+                      className="text-xs font-bold text-brand-orange hover:text-orange-600 flex items-center gap-0.5 transition-colors sm:hidden"
                     >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        const el = document.getElementById(`home-section-slider-${section.id}`);
-                        if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
-                      }}
-                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                      <span>View All</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+
+                    <div className="hidden sm:flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          const el = document.getElementById(`home-section-slider-${section.id}`);
+                          if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
+                        }}
+                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const el = document.getElementById(`home-section-slider-${section.id}`);
+                          if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
+                        }}
+                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 <div
                   id={`home-section-slider-${section.id}`}
-                  className="w-full overflow-x-auto flex gap-3.5 py-2 scroll-smooth snap-x snap-mandatory no-scrollbar"
+                  className="w-full grid grid-cols-2 gap-2.5 sm:gap-4 sm:flex sm:overflow-x-auto py-1 sm:py-2 sm:scroll-smooth sm:snap-x sm:snap-mandatory sm:no-scrollbar"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   {section.products.map((product, idx) => renderProductCard(product, idx, true))}
@@ -1004,44 +980,54 @@ export default function Home() {
                     </h2>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        const el = document.getElementById(`home-cat-slider-${homeCat.id}`);
-                        if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
-                      }}
-                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/shop?category=${homeCat.slug || (homeCat.name || '').toLowerCase()}`}
+                      className="text-xs font-bold text-brand-orange hover:text-orange-600 flex items-center gap-0.5 transition-colors sm:hidden"
                     >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        const el = document.getElementById(`home-cat-slider-${homeCat.id}`);
-                        if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
-                      }}
-                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                      <span>View All</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+
+                    <div className="hidden sm:flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          const el = document.getElementById(`home-cat-slider-${homeCat.id}`);
+                          if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
+                        }}
+                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const el = document.getElementById(`home-cat-slider-${homeCat.id}`);
+                          if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
+                        }}
+                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 <div
                   id={`home-cat-slider-${homeCat.id}`}
-                  className="w-full overflow-x-auto flex gap-3.5 py-2 scroll-smooth snap-x snap-mandatory no-scrollbar"
+                  className="w-full grid grid-cols-2 gap-2.5 sm:gap-4 sm:flex sm:overflow-x-auto py-1 sm:py-2 sm:scroll-smooth sm:snap-x sm:snap-mandatory sm:no-scrollbar"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   {isProductsLoading ? (
                     Array.from({ length: 4 }).map((_, idx) => (
                       <div
                         key={idx}
-                        className="min-w-[210px] md:min-w-[240px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse snap-start"
+                        className="w-full sm:min-w-[210px] md:min-w-[240px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse sm:snap-start"
                       />
                     ))
                   ) : categoryProducts.length > 0 ? (
                     categoryProducts.map((product, idx) => renderProductCard(product, idx, true))
                   ) : (
-                    <div className="w-full flex items-center justify-center py-6">
+                    <div className="col-span-2 w-full flex items-center justify-center py-6">
                       <span className="text-xs text-slate-400 font-semibold">No products available.</span>
                     </div>
                   )}
@@ -1068,44 +1054,54 @@ export default function Home() {
                   </h2>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById(`home-slider-${homeCat.id}`);
-                      if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
-                    }}
-                    className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/shop?sub_category=${homeCat.slug || (homeCat.name || '').toLowerCase()}`}
+                    className="text-xs font-bold text-brand-orange hover:text-orange-600 flex items-center gap-0.5 transition-colors sm:hidden"
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById(`home-slider-${homeCat.id}`);
-                      if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
-                    }}
-                    className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                    <span>View All</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById(`home-slider-${homeCat.id}`);
+                        if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
+                      }}
+                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById(`home-slider-${homeCat.id}`);
+                        if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
+                      }}
+                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div
                 id={`home-slider-${homeCat.id}`}
-                className="w-full overflow-x-auto flex gap-3.5 py-2 scroll-smooth snap-x snap-mandatory no-scrollbar"
+                className="w-full grid grid-cols-2 gap-2.5 sm:gap-4 sm:flex sm:overflow-x-auto py-1 sm:py-2 sm:scroll-smooth sm:snap-x sm:snap-mandatory sm:no-scrollbar"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {isProductsLoading ? (
                   Array.from({ length: 4 }).map((_, idx) => (
                     <div
                       key={idx}
-                      className="min-w-[210px] md:min-w-[240px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse snap-start"
+                      className="w-full sm:min-w-[210px] md:min-w-[240px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse sm:snap-start"
                     />
                   ))
                 ) : categoryProducts.length > 0 ? (
                   categoryProducts.map((product, idx) => renderProductCard(product, idx, true))
                 ) : (
-                  <div className="w-full flex items-center justify-center py-6">
+                  <div className="col-span-2 w-full flex items-center justify-center py-6">
                     <span className="text-xs text-slate-400 font-semibold">No products available.</span>
                   </div>
                 )}
@@ -1114,88 +1110,6 @@ export default function Home() {
             );
           })}
 
-          {/* ========= STATIC PRODUCT SECTIONS (Commented Out) =========
-          {/* Premium Apparel Section: T-Shirts */}
-          {/*
-          <section id="men-section" className="flex flex-col gap-6 w-full mt-6">
-            <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">
-                  Premium Apparel
-                </span>
-                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  FABRILIFE PREMIUM T-SHIRTS
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                </h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => { const el = document.getElementById('product-slider-1'); if (el) el.scrollBy({ left: -340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronLeft className="w-5 h-5" /></button>
-                <button onClick={() => { const el = document.getElementById('product-slider-1'); if (el) el.scrollBy({ left: 340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronRight className="w-5 h-5" /></button>
-              </div>
-            </div>
-            <div id="product-slider-1" className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {filteredTshirts.map((prod, idx) => renderProductCard(prod, idx))}
-            </div>
-          </section>
-          */}
-
-          {/* Polo Shirts Section */}
-          {/*
-          <section id="women-section" className="flex flex-col gap-6 w-full mt-6">
-            <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">Premium Apparel</span>
-                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">FEATURED POLO SHIRTS<span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" /></h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => { const el = document.getElementById('product-slider-2'); if (el) el.scrollBy({ left: -340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronLeft className="w-5 h-5" /></button>
-                <button onClick={() => { const el = document.getElementById('product-slider-2'); if (el) el.scrollBy({ left: 340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronRight className="w-5 h-5" /></button>
-              </div>
-            </div>
-            <div id="product-slider-2" className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {filteredShuffled1.map((prod, idx) => renderProductCard(prod, idx))}
-            </div>
-          </section>
-          */}
-
-          {/* Casual Shirts Section */}
-          {/*
-          <section id="teens-section" className="flex flex-col gap-6 w-full mt-6">
-            <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">Premium Apparel</span>
-                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">CASUAL SHIRTS & FITS<span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" /></h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => { const el = document.getElementById('product-slider-3'); if (el) el.scrollBy({ left: -340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronLeft className="w-5 h-5" /></button>
-                <button onClick={() => { const el = document.getElementById('product-slider-3'); if (el) el.scrollBy({ left: 340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronRight className="w-5 h-5" /></button>
-              </div>
-            </div>
-            <div id="product-slider-3" className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {filteredShuffled2.map((prod, idx) => renderProductCard(prod, idx))}
-            </div>
-          </section>
-          */}
-
-          {/* Premium Chino Pants Section */}
-          {/*
-          <section id="kids-section" className="flex flex-col gap-6 w-full mt-6">
-            <div className="flex items-end justify-between border-b border-slate-200/60 pb-4">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] md:text-xs font-black tracking-[0.25em] text-amber-500 uppercase">Premium Apparel</span>
-                <h2 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">PREMIUM CHINO PANTS<span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" /></h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => { const el = document.getElementById('product-slider-4'); if (el) el.scrollBy({ left: -340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronLeft className="w-5 h-5" /></button>
-                <button onClick={() => { const el = document.getElementById('product-slider-4'); if (el) el.scrollBy({ left: 340, behavior: 'smooth' }); }} className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer hover:scale-105 active:scale-95"><ChevronRight className="w-5 h-5" /></button>
-              </div>
-            </div>
-            <div id="product-slider-4" className="w-full overflow-x-auto flex gap-6 py-4 scroll-smooth snap-x snap-mandatory no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {filteredShuffled3.map((prod, idx) => renderProductCard(prod, idx))}
-            </div>
-          </section>
-          */}
-          {/* ========= END STATIC PRODUCT SECTIONS ========= */}
           </div>
         </>
       </>

@@ -16,6 +16,7 @@ import {
   FileText,
 } from 'lucide-react';
 import SafeHtml from '../../components/SafeHtml';
+import { useApp } from '../../context';
 
 interface PageDetail {
   id: number;
@@ -35,6 +36,7 @@ interface PageListItem {
 }
 
 export default function CustomPolicyClient({ params }: { params?: Promise<{ slug: string }> }) {
+  const { systemConfig } = useApp();
   const router = useRouter();
   const nextParams = useParams();
 
@@ -265,8 +267,17 @@ export default function CustomPolicyClient({ params }: { params?: Promise<{ slug
               </p>
             </div>
             <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5 text-xs">
-              <span className="font-bold text-amber-400">+880 1895-238135</span>
-              <span className="text-[11px] text-slate-400">Available 9:00 AM - 10:00 PM</span>
+              {systemConfig?.phones && systemConfig.phones.length > 0 ? (
+                <a href={`tel:${systemConfig.phones[0].replace(/\s/g, '')}`} className="font-bold text-amber-400 hover:underline transition-colors w-fit">
+                  {systemConfig.phones[0]}
+                </a>
+              ) : null}
+              {systemConfig?.emails && systemConfig.emails.length > 0 && (
+                <a href={`mailto:${systemConfig.emails[0]}`} className="font-medium text-slate-300 hover:underline transition-colors w-fit text-[11px]">
+                  {systemConfig.emails[0]}
+                </a>
+              )}
+              <span className="text-[11px] text-slate-400">Customer Support Available</span>
             </div>
           </div>
         </div>
