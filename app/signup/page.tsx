@@ -133,15 +133,17 @@ export default function SignupPage() {
           {isConfigLoading ? (
             <div className="h-12 w-36 shimmer-effect-light rounded-lg" />
           ) : systemConfig?.logo ? (
-            <img 
-              src={systemConfig.logo} 
-              alt={systemConfig.title || 'Logo'} 
-              className="h-12 sm:h-14 w-auto max-w-[220px] object-contain" 
-            />
+            <Link href="/" className="inline-block hover:opacity-90 transition-opacity">
+              <img 
+                src={systemConfig.logo} 
+                alt={systemConfig.title || 'Logo'} 
+                className="h-12 sm:h-14 w-auto max-w-[220px] object-contain" 
+              />
+            </Link>
           ) : (
-            <div className="flex items-center gap-1.5 text-xl tracking-tighter">
+            <Link href="/" className="flex items-center gap-1.5 text-xl tracking-tighter hover:opacity-90 transition-opacity">
               <span className="font-extrabold text-slate-900">{systemConfig?.title || 'STORE'}</span>
-            </div>
+            </Link>
           )}
           <p className="text-xs text-slate-500 font-medium">Create a new customer account to start shopping and tracking your orders.</p>
         </div>

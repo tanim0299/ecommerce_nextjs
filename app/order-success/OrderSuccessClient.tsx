@@ -319,17 +319,19 @@ export default function OrderSuccessClient() {
           {/* Receipt Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-slate-100 gap-4">
             <div>
-              {systemConfig?.logo ? (
-                <img
-                  src={resolveImageUrl(systemConfig.logo)}
-                  alt={systemConfig.title || 'Brand Logo'}
-                  className="h-10 w-auto max-w-[200px] object-contain"
-                />
-              ) : (
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                  {systemConfig?.title || 'SLOOR'}
-                </h2>
-              )}
+              <Link href="/" className="inline-block hover:opacity-90 transition-opacity">
+                {systemConfig?.logo ? (
+                  <img
+                    src={resolveImageUrl(systemConfig.logo)}
+                    alt={systemConfig.title || 'Brand Logo'}
+                    className="h-10 w-auto max-w-[200px] object-contain"
+                  />
+                ) : (
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                    {systemConfig?.title || 'SLOOR'}
+                  </h2>
+                )}
+              </Link>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
                 Official Order Confirmation & Receipt
               </p>
@@ -360,12 +362,20 @@ export default function OrderSuccessClient() {
                 <div className="mt-1 space-y-1 text-xs text-slate-600 font-semibold">
                   <p className="flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{customerPhone || 'Not provided'}</span>
+                    {customerPhone ? (
+                      <a href={`tel:${customerPhone}`} className="hover:text-orange-600 hover:underline">
+                        {customerPhone}
+                      </a>
+                    ) : (
+                      <span>Not provided</span>
+                    )}
                   </p>
                   {customerEmail && (
                     <p className="flex items-center gap-1.5">
                       <Mail className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{customerEmail}</span>
+                      <a href={`mailto:${customerEmail}`} className="hover:text-orange-600 hover:underline">
+                        {customerEmail}
+                      </a>
                     </p>
                   )}
                 </div>

@@ -1,12 +1,14 @@
 'use client';
 
 import GoogleTagManager from './components/GoogleTagManager';
+import SloorAssistant from './components/SloorAssistant';
 import MetaPixel from './components/MetaPixel';
 
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
+  Navigation,
   Search, 
   ShoppingBag, 
   User, 
@@ -234,6 +236,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   };
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isStoreModalOpen, setIsStoreModalOpen] = React.useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
   const [expandedItems, setExpandedItems] = React.useState<{[key: number]: boolean}>({});
   const [expandedCategories, setExpandedCategories] = React.useState<{[key: number]: boolean}>({});
@@ -493,12 +496,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
-    if (promoCode.trim().toUpperCase() === 'FABRILIFE10') {
-      setDiscountPercent(10);
-      alert('Promo code applied! You saved 10% off your purchase.');
-    } else {
-      alert('Invalid coupon code. Try "FABRILIFE10"');
+    if (!promoCode.trim()) {
+      alert('Please enter a coupon code.');
+      return;
     }
+    alert('This coupon code is not active or has expired.');
   };
 
   const handleCheckout = () => {
@@ -525,8 +527,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       );
     }
     const titleParts = systemConfig.title.split(' ');
-    const firstPart = titleParts[0] || 'FABRI';
-    const secondPart = titleParts.slice(1).join(' ') || 'LIFE';
+    const firstPart = titleParts[0] || 'STORE';
+    const secondPart = titleParts.slice(1).join(' ') || '';
     return (
       <>
         <svg viewBox="0 0 60 70" className="w-7 h-8 text-brand-orange group-hover:scale-105 transition-transform" fill="currentColor">
@@ -548,13 +550,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <MetaPixel />
       {/* Top Banner Message */}
       <div className="w-full bg-slate-950 text-white py-1 px-4 text-center text-[9.5px] font-bold uppercase tracking-wider border-b border-slate-900 flex justify-center items-center gap-4">
-        <span className="flex items-center gap-1"><Truck className="w-3 h-3 text-amber-500" /> FREE SHIPPING ON ORDERS OVER BDT 1500!</span>
+        <span className="flex items-center gap-1"><Truck className="w-3 h-3 text-amber-500" /> FAST CASH ON DELIVERY ALL OVER BANGLADESH</span>
         <span className="hidden md:inline text-slate-600">•</span>
         <span className="hidden md:flex items-center gap-1">
           <Phone className="w-3 h-3 text-amber-500" /> HOTLINE: {isConfigLoading || !systemConfig ? (
             <span className="h-2.5 w-20 shimmer-effect rounded inline-block" />
           ) : (
-            systemConfig.phones[0]
+            <a href={`tel:${systemConfig.phones[0]}`} className="hover:text-amber-400 hover:underline transition-colors">
+              {systemConfig.phones[0]}
+            </a>
           )}
         </span>
       </div>
@@ -621,15 +625,16 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500">Search</span>
             </button>
 
-            {/* Outlet Stores */}
-            <Link
-              href="/stores"
-              aria-current={pathname === '/stores' ? 'page' : undefined}
-              className={`flex flex-col items-center gap-0.5 transition-colors cursor-pointer group ${pathname === '/stores' ? 'text-brand-orange' : 'text-slate-700 hover:text-brand-orange'}`}
+            {/* Outlet Stores / Store Locator Modal */}
+            <button
+              type="button"
+              onClick={() => setIsStoreModalOpen(true)}
+              className="flex flex-col items-center gap-0.5 transition-colors cursor-pointer group text-slate-700 hover:text-brand-orange"
+              title="Store Locator"
             >
               <MapPin className="w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform" />
-              <span className={`text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${pathname === '/stores' ? 'text-brand-orange' : 'text-slate-500'}`}>Stores</span>
-            </Link>
+              <span className="text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 text-slate-500">Stores</span>
+            </button>
 
             {/* Profile */}
             <Link 
@@ -814,6 +819,14 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   </div>
                 );
               })}
+            <button
+              type="button"
+              onClick={() => setIsStoreModalOpen(true)}
+              className="flex items-center gap-1.5 py-1.5 transition-colors hover:text-brand-orange cursor-pointer"
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Store Locator
+            </button>
             <Link
               href="/track-order"
               aria-current={pathname === '/track-order' ? 'page' : undefined}
@@ -838,9 +851,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 text-sm">
           {/* Brand Info */}
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
+            <Link href="/" className="inline-flex items-center gap-2 hover:opacity-90 transition-opacity w-fit">
               {renderLogo(true)}
-            </div>
+            </Link>
             <p className="text-slate-400 font-light leading-relaxed">
               Premium clothing e-commerce retail store. Experience the finest combed cotton fabrics, refined tailoring, and modern designs for your everyday lifestyle.
             </p>
@@ -969,6 +982,16 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <Link href="/track-order" className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
                 Track Your Order
               </Link>
+              <Link href="/contact" className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
+                Contact Us
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsStoreModalOpen(true)}
+                className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+              >
+                Store Locator
+              </button>
             </div>
           </div>
 
@@ -1004,53 +1027,177 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               ) : (
                 <>
                   {systemConfig.phones && systemConfig.phones.length > 0 && (
-                    <span>Helpline: {systemConfig.phones.join(', ')}</span>
+                    <span>
+                      Helpline:{' ' }
+                      {systemConfig.phones.map((phone, idx) => (
+                        <React.Fragment key={idx}>
+                          {idx > 0 && ', '}
+                          <a href={`tel:${phone.trim()}`} className="hover:text-amber-400 hover:underline transition-colors">
+                            {phone}
+                          </a>
+                        </React.Fragment>
+                      ))}
+                    </span>
                   )}
                   {systemConfig.emails && systemConfig.emails.length > 0 && (
-                    <span>Email: {systemConfig.emails.join(', ')}</span>
+                    <span>
+                      Email:{' ' }
+                      {systemConfig.emails.map((email, idx) => (
+                        <React.Fragment key={idx}>
+                          {idx > 0 && ', '}
+                          <a href={`mailto:${email.trim()}`} className="hover:text-amber-400 hover:underline transition-colors">
+                            {email}
+                          </a>
+                        </React.Fragment>
+                      ))}
+                    </span>
                   )}
                   {systemConfig.address && (
                     <span>Address: {systemConfig.address}</span>
                   )}
-                  {systemConfig.google_map && (
-                    <a 
-                      href={systemConfig.google_map} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="inline-flex items-center gap-1 text-brand-orange hover:text-orange-400 font-bold transition-colors mt-1"
-                    >
-                      <MapPin className="w-3.5 h-3.5" /> View Google Map
-                    </a>
-                  )}
+                  <button 
+                    type="button"
+                    onClick={() => setIsStoreModalOpen(true)}
+                    className="inline-flex items-center gap-1 text-brand-orange hover:text-orange-400 font-bold transition-colors mt-1.5 cursor-pointer text-left"
+                  >
+                    <MapPin className="w-3.5 h-3.5" /> Store Locator (Live Map) &rarr;
+                  </button>
                 </>
               )}
             </div>
           </div>
         </div>
 
-        {/* Divider line */}
-        <div className="max-w-7xl mx-auto border-t border-slate-900 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium">
-          <div>
-            {isConfigLoading || !systemConfig ? (
-              <div className="h-3.5 w-64 shimmer-effect rounded" />
-            ) : (
-              `© 2026 ${systemConfig.title}. All rights reserved. ${systemConfig.address || 'Dhaka, Bangladesh'}.`
-            )}
-          </div>
-          
-          {/* Payment Partners */}
-          <div className="flex items-center gap-4 opacity-50 hover:opacity-85 transition-opacity duration-300">
-            {['bKash', 'Nagad', 'Rocket', 'Visa', 'Mastercard'].map((pay) => (
-              <span
-                key={pay}
-                className="bg-slate-900 border border-slate-800 text-[10px] font-black px-2 py-1 rounded text-white tracking-wider"
+        
+      </footer>
+
+
+      {/* Store Locator Map Modal */}
+      {isStoreModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in"
+          onClick={() => setIsStoreModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden border border-slate-150 flex flex-col max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-brand-orange/10 text-brand-orange flex items-center justify-center">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-tight">
+                    Store Locator
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-semibold truncate max-w-xs sm:max-w-md">
+                    {systemConfig?.title || 'Our Official Outlet'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsStoreModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close modal"
               >
-                {pay}
-              </span>
-            ))}
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Map View */}
+            <div className="w-full h-[320px] sm:h-[400px] bg-slate-100 relative">
+              {(() => {
+                let mapUrl = null;
+                if (systemConfig?.google_map) {
+                  const match = systemConfig.google_map.match(/src=["']([^"']+)["']/i);
+                  if (match && match[1]) mapUrl = match[1];
+                  else if (systemConfig.google_map.startsWith('http')) mapUrl = systemConfig.google_map;
+                }
+                if (!mapUrl && systemConfig?.address) {
+                  mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(systemConfig.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+                }
+
+                if (mapUrl) {
+                  return (
+                    <iframe
+                      src={mapUrl}
+                      title="Store Location"
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="w-full h-full"
+                    />
+                  );
+                }
+
+                return (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-2 p-6 text-center">
+                    <MapPin className="w-10 h-10 text-slate-300" />
+                    <p className="text-xs font-semibold">Store map coordinates not configured.</p>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Store Info & Quick Actions Footer */}
+            <div className="p-4 sm:p-6 bg-white border-t border-slate-100 flex flex-col gap-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-brand-orange shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                      Store Address
+                    </span>
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                      {systemConfig?.address || 'Dhaka, Bangladesh'}
+                    </p>
+                  </div>
+                </div>
+
+                {systemConfig?.phones && systemConfig.phones.length > 0 && (
+                  <div className="sm:text-right pl-6 sm:pl-0">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                      Helpline
+                    </span>
+                    <a
+                      href={`tel:${systemConfig.phones[0].replace(/\s/g, '')}`}
+                      className="text-xs sm:text-sm font-black text-brand-orange hover:underline"
+                    >
+                      {systemConfig.phones[0]}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                {systemConfig?.address && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(systemConfig.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider transition-all inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Navigation className="w-3.5 h-3.5" /> Directions
+                  </a>
+                )}
+                <Link
+                  href="/contact"
+                  onClick={() => setIsStoreModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 hover:border-brand-orange hover:text-brand-orange text-slate-700 text-xs font-bold uppercase transition-all"
+                >
+                  Full Contact Page &rarr;
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
-      </footer>
+      )}
 
       {/* Fixed Floating Cart Button on Right Side */}
       <button
@@ -1387,7 +1534,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <form onSubmit={handleApplyCoupon} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Promo Code (FABRILIFE10)"
+                  placeholder="Coupon Code"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value)}
                   className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 uppercase placeholder-slate-400"
@@ -1462,13 +1609,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <div className={`absolute top-0 bottom-0 left-0 w-80 max-w-[85vw] bg-white shadow-2xl flex flex-col transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           {/* Drawer Header */}
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-            <div className="flex items-center gap-2">
+            <Link 
+              href="/" 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
+            >
               {systemConfig?.logo ? (
                 <img src={systemConfig.logo} alt={systemConfig.title} className="h-10 w-auto max-w-[170px] object-contain" />
               ) : (
-                <span className="font-extrabold text-slate-950 text-base tracking-tighter">{systemConfig?.title || 'BELIEVERS'}</span>
+                <span className="font-extrabold text-slate-950 text-base tracking-tighter">{systemConfig?.title || 'STORE'}</span>
               )}
-            </div>
+            </Link>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
               className="text-slate-400 hover:text-slate-950 p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-all cursor-pointer"
@@ -1622,6 +1773,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           </div>
         </div>
       </div>
+
+      {/* Sloor AI Shopping Assistant */}
+      <SloorAssistant />
     </div>
   );
 }

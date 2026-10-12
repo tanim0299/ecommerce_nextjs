@@ -241,6 +241,7 @@ export default function ProductDetailClient() {
     handleToggleWishlist,
     setIsCartOpen,
     resolveImageUrl,
+    systemConfig,
   } = useApp();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
@@ -264,6 +265,37 @@ export default function ProductDetailClient() {
   const [showStickyBar, setShowStickyBar] = useState(false);
   const mainBuyBtnRef = useRef<HTMLButtonElement | null>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const trustBadges = useMemo(() => {
+    const list = systemConfig?.trust_badges;
+    if (Array.isArray(list) && list.length > 0) {
+      return list.filter((b: any) => b.is_active !== false);
+    }
+    return [
+      { key: 'shipping', icon: 'truck', title: 'Free Shipping', subtitle: 'Over 1500 BDT' },
+      { key: 'delivery', icon: 'zap', title: 'Fast Delivery', subtitle: '2-3 Days' },
+      { key: 'return', icon: 'rotate-ccw', title: '7-Day Return', subtitle: 'Exchange' },
+      { key: 'authentic', icon: 'shield-check', title: '100% Genuine', subtitle: 'Authentic' },
+    ];
+  }, [systemConfig?.trust_badges]);
+
+  const renderBadgeIcon = (iconName?: string, key?: string) => {
+    const name = (iconName || key || '').toLowerCase();
+    if (name.includes('truck') || name.includes('shipping')) {
+      return <Truck className="w-4 h-4 text-brand-orange shrink-0" />;
+    }
+    if (name.includes('zap') || name.includes('delivery') || name.includes('fast')) {
+      return <Zap className="w-4 h-4 text-amber-500 shrink-0" />;
+    }
+    if (name.includes('return') || name.includes('rotate')) {
+      return <RotateCcw className="w-4 h-4 text-blue-500 shrink-0" />;
+    }
+    if (name.includes('shield') || name.includes('authentic') || name.includes('genuine')) {
+      return <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />;
+    }
+    return <ShieldCheck className="w-4 h-4 text-brand-orange shrink-0" />;
+  };
+
 
   const scrollThumbnails = (direction: 'left' | 'right') => {
     if (thumbnailContainerRef.current) {
@@ -1180,37 +1212,20 @@ export default function ProductDetailClient() {
               </div>
             </div>
 
-            {/* Trust & Guarantee Highlights (Clean on White BG) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100">
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100">
-                <Truck className="w-4 h-4 text-brand-orange shrink-0" />
-                <div className="text-[10px] leading-tight">
-                  <p className="font-bold text-slate-900">Free Shipping</p>
-                  <p className="text-slate-500">Over 1500৳</p>
-                </div>
+            {/* Trust & Guarantee Highlights (Dynamic from System Config) */}
+            {trustBadges && trustBadges.length > 0 && (
+              <div className={`grid grid-cols-2 ${trustBadges.length <= 2 ? 'sm:grid-cols-2' : trustBadges.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-2 pt-2 border-t border-slate-100`}>
+                {trustBadges.map((badge, idx) => (
+                  <div key={badge.key || idx} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100">
+                    {renderBadgeIcon(badge.icon, badge.key)}
+                    <div className="text-[10px] leading-tight min-w-0">
+                      <p className="font-bold text-slate-900 truncate">{badge.title}</p>
+                      {badge.subtitle ? <p className="text-slate-500 truncate">{badge.subtitle}</p> : null}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100">
-                <Zap className="w-4 h-4 text-amber-500 shrink-0" />
-                <div className="text-[10px] leading-tight">
-                  <p className="font-bold text-slate-900">Fast Delivery</p>
-                  <p className="text-slate-500">2-3 Days</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100">
-                <RotateCcw className="w-4 h-4 text-blue-500 shrink-0" />
-                <div className="text-[10px] leading-tight">
-                  <p className="font-bold text-slate-900">7-Day Return</p>
-                  <p className="text-slate-500">Exchange</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100">
-                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                <div className="text-[10px] leading-tight">
-                  <p className="font-bold text-slate-900">100% Genuine</p>
-                  <p className="text-slate-500">Authentic</p>
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* Warranty Info */}
             {product.has_warranty && product.warranty && (
