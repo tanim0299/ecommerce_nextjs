@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context';
+import SocialLinks from '../components/SocialLinks';
 
 export default function ContactPage() {
   const { systemConfig, isConfigLoading } = useApp();
@@ -197,6 +198,26 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
+
+      {/* Social Channels Strip */}
+      {systemConfig?.social_links && systemConfig.social_links.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-150 p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 text-brand-orange flex items-center justify-center shrink-0">
+              <Globe className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">
+                Official Social Channels
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Follow our official social profiles for daily style releases, customer stories, and direct messages.
+              </p>
+            </div>
+          </div>
+          <SocialLinks variant="light" itemClassName="w-10 h-10 rounded-xl" iconSizeClass="w-5 h-5" />
+        </div>
+      )}
 
       {/* Main Two-Column: Interactive Map & Contact Message Form */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

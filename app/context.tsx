@@ -56,9 +56,14 @@ export interface MarketingConfig {
 }
 
 export interface SocialLink {
+  sl?: number;
+  title?: string;
   platform: string;
   name: string;
+  icon?: string | null;
+  link?: string;
   url: string;
+  status?: number | boolean;
 }
 
 export interface TrustBadge {
@@ -204,6 +209,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             
             if (data.logo) data.logo = resolveImageUrl(data.logo);
             if (data.favicon) data.favicon = resolveImageUrl(data.favicon);
+            if (Array.isArray(data.social_links)) {
+              data.social_links = data.social_links.map((s: SocialLink) => {
+                if (s.icon && (s.icon.includes('/') || s.icon.includes('.')) && !s.icon.startsWith('<svg') && !s.icon.startsWith('http')) {
+                  s.icon = resolveImageUrl(s.icon);
+                }
+                return s;
+              });
+            }
 
             setSystemConfig(data);
           }
