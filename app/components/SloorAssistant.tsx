@@ -16,7 +16,7 @@ import {
   Flame,
   CheckCircle2,
 } from 'lucide-react';
-import { useApp } from '../context';
+import { useApp, getProductUrl } from '../context';
 
 interface AssistantProduct {
   id: number;
@@ -54,11 +54,11 @@ interface AssistantConfig {
 }
 
 const DEFAULT_SUGGESTIONS = [
-  '🔥 Trending Sneakers',
-  '💰 Shoes Under 3,500 BDT',
-  '📏 Sizing Guide',
-  '🚚 Delivery & Shipping Policy',
-  '🔄 7-Day Return Policy',
+  '🔥 ট্রেন্ডিং স্নিকার্স',
+  '💰 ৪,০০০ টাকার উপরে প্রিমিয়াম কালেকশন',
+  '📏 সাইজ গাইড (Sizing Chart)',
+  '🚚 ডেলিভারি চার্জ ও সময়সীমা',
+  '🔄 ৭ দিনের রিটার্ন ও এক্সচেঞ্জ পলিসি',
 ];
 
 export default function SloorAssistant() {
@@ -66,7 +66,6 @@ export default function SloorAssistant() {
   const { resolveImageUrl, handleQuickAddToCart, showToast } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [hasUnreadNotice, setHasUnreadNotice] = useState(true);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -158,7 +157,6 @@ export default function SloorAssistant() {
   // Focus input when chat opens
   useEffect(() => {
     if (isOpen) {
-      setHasUnreadNotice(false);
       setTimeout(() => inputRef.current?.focus(), 250);
     }
   }, [isOpen]);
@@ -277,27 +275,6 @@ export default function SloorAssistant() {
     <>
       {/* Floating Launcher Button */}
       <div className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2.5">
-        {/* Notification Bubble (Teaser Tooltip) */}
-        {!isOpen && hasUnreadNotice && (
-          <div
-            onClick={() => setIsOpen(true)}
-            className="flex items-center gap-2 bg-slate-900/95 backdrop-blur-md text-white text-xs font-semibold px-3.5 py-2 rounded-2xl shadow-xl border border-slate-700/80 cursor-pointer animate-bounce group transition-transform hover:scale-105"
-          >
-            <Sparkles className="w-4 h-4 animate-pulse" style={{ color: themeColor }} />
-            <span>{launcherText}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setHasUnreadNotice(false);
-              }}
-              className="ml-1 text-slate-400 hover:text-white p-0.5 rounded-full"
-              title="Dismiss"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        )}
-
         {/* Toggle Button */}
         <button
           id="sloor-ai-launcher"
@@ -437,7 +414,7 @@ export default function SloorAssistant() {
                           </p>
                           {m.products.map((prod) => {
                             const prodImage = prod.image ? resolveImageUrl(prod.image) : '';
-                            const prodUrl = `/product/${encodeURIComponent(prod.slug || String(prod.id))}`;
+                            const prodUrl = getProductUrl(prod);
                             const isDiscounted = Boolean(prod.regular_price && prod.regular_price > prod.price);
 
                             return (
