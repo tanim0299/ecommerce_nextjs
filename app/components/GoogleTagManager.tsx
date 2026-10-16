@@ -10,8 +10,19 @@ export default function GoogleTagManager() {
     if (!systemConfig) return;
 
     const marketing = systemConfig.marketing;
-    const isGtmEnabled = marketing ? marketing.gtm_enabled !== false : true;
+    const isGtmEnabled = marketing ? marketing.gtm_enabled === true : false;
     const gtmId = isGtmEnabled ? (marketing?.gtm_id || systemConfig.gtm_id) : null;
+
+    // If GTM is disabled, remove any existing injected GTM script/noscript from DOM
+    if (!isGtmEnabled || !gtmId) {
+      const existingScript = document.getElementById('gtm-script');
+      if (existingScript) existingScript.remove();
+
+      const existingNoscript = document.getElementById('gtm-noscript');
+      if (existingNoscript) existingNoscript.remove();
+
+      return;
+    }
 
     // 1. Inject Google Tag Manager Head Script
     if (gtmId && typeof window !== 'undefined') {
@@ -49,14 +60,20 @@ export default function GoogleTagManager() {
       }
     }
 
-    // 3. Inject Custom Head Scripts if provided
+    // 3. Inject Custom Head Scripts if provided (prevent injecting redundant GTM scripts if GTM is disabled)
     if (marketing?.custom_head_scripts && typeof window !== 'undefined') {
       const existingHeadCustom = document.getElementById('custom-head-scripts');
       if (!existingHeadCustom) {
-        const div = document.createElement('div');
-        div.id = 'custom-head-scripts';
-        div.innerHTML = marketing.custom_head_scripts;
-        document.head.appendChild(div);
+        let customHead = marketing.custom_head_scripts;
+        if (!isGtmEnabled && customHead.includes('googletagmanager.com/gtm.js')) {
+          customHead = customHead.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*googletagmanager\.com\/gtm\.js[^<]*<\/script>/gi, '');
+        }
+        if (customHead.trim()) {
+          const div = document.createElement('div');
+          div.id = 'custom-head-scripts';
+          div.innerHTML = customHead;
+          document.head.appendChild(div);
+        }
       }
     }
 
@@ -64,10 +81,16 @@ export default function GoogleTagManager() {
     if (marketing?.custom_body_scripts && typeof window !== 'undefined' && document.body) {
       const existingBodyCustom = document.getElementById('custom-body-scripts');
       if (!existingBodyCustom) {
-        const div = document.createElement('div');
-        div.id = 'custom-body-scripts';
-        div.innerHTML = marketing.custom_body_scripts;
-        document.body.appendChild(div);
+        let customBody = marketing.custom_body_scripts;
+        if (!isGtmEnabled && customBody.includes('googletagmanager.com/ns.html')) {
+          customBody = customBody.replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*googletagmanager\.com\/ns\.html[^<]*<\/noscript>/gi, '');
+        }
+        if (customBody.trim()) {
+          const div = document.createElement('div');
+          div.id = 'custom-body-scripts';
+          div.innerHTML = customBody;
+          document.head.appendChild(div);
+        }
       }
     }
   }, [systemConfig]);

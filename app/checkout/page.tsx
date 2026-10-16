@@ -104,6 +104,7 @@ export default function CheckoutPage() {
   const [billingEmail, setBillingEmail] = useState('');
   const [billingPhone, setBillingPhone] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
+  const [billingPostalCode, setBillingPostalCode] = useState('');
 
   const [addressMode, setAddressMode] = useState<'saved' | 'custom'>('saved');
 
@@ -491,6 +492,9 @@ export default function CheckoutPage() {
       const finalPhone = (user && addressMode === 'saved' && selectedSavedAddr) ? selectedSavedAddr.phone : billingPhone;
       const finalEmail = (user && addressMode === 'saved') ? (user.email || '') : billingEmail;
       const finalAddress = (user && addressMode === 'saved' && selectedSavedAddr) ? selectedSavedAddr.address : billingAddress;
+      const finalPostalCode = (user && addressMode === 'saved' && selectedSavedAddr)
+        ? ((selectedSavedAddr as any).postal_code || (selectedSavedAddr as any).zip_code || billingPostalCode || '').trim()
+        : billingPostalCode.trim();
 
       const finalCountryId = (user && addressMode === 'saved' && selectedSavedAddr) 
         ? selectedSavedAddr.country_id 
@@ -512,7 +516,8 @@ export default function CheckoutPage() {
         name: finalName,
         phone: finalPhone,
         email: finalEmail || null,
-        address: finalAddress,
+        address: finalPostalCode ? `${finalAddress}${finalAddress.includes(finalPostalCode) ? '' : ` (Postal: ${finalPostalCode})`}` : finalAddress,
+        postal_code: finalPostalCode || null,
         country_id: finalCountryId ? Number(finalCountryId) : 1,
         division_id: finalDivisionId ? Number(finalDivisionId) : null,
         district_id: finalDistrictId ? Number(finalDistrictId) : null,
@@ -612,6 +617,11 @@ export default function CheckoutPage() {
             customer_country: countryName,
             country: 'Bangladesh',
             country_code: 'BD',
+            postal_code: finalPostalCode || '',
+            zip: finalPostalCode || '',
+            zip_code: finalPostalCode || '',
+            customer_postal_code: finalPostalCode || '',
+            customer_zip: finalPostalCode || '',
             payment_method: paymentMethod,
 
             // Customer Object for GTM Custom JS / Nested Variables
@@ -627,6 +637,9 @@ export default function CheckoutPage() {
               district: districtName,
               division: divisionName,
               upazila: upazilaName,
+              postal_code: finalPostalCode || '',
+              zip: finalPostalCode || '',
+              zip_code: finalPostalCode || '',
               country: countryName,
             },
 
@@ -640,6 +653,7 @@ export default function CheckoutPage() {
                 street: finalAddress,
                 city: districtName || undefined,
                 region: divisionName || undefined,
+                postal_code: finalPostalCode || undefined,
                 country: 'BD',
               }
             },
@@ -1109,17 +1123,33 @@ export default function CheckoutPage() {
                   )}
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Email Address (Optional)</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="email"
-                      placeholder="e.g. user@example.com"
-                      value={billingEmail}
-                      onChange={(e) => setBillingEmail(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Email Address (Optional)</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="email"
+                        placeholder="e.g. user@example.com"
+                        value={billingEmail}
+                        onChange={(e) => setBillingEmail(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Postal / ZIP Code (Optional)</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. 1205"
+                        value={billingPostalCode}
+                        onChange={(e) => setBillingPostalCode(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

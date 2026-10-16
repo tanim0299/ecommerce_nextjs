@@ -8,9 +8,10 @@ export default function MetaPixel() {
   const { systemConfig } = useApp();
   const pathname = usePathname();
   const isInitializedRef = useRef(false);
+  const lastPathnameRef = useRef<string | null>(null);
 
   const marketing = systemConfig?.marketing;
-  const isPixelEnabled = marketing ? marketing.fb_pixel_enabled !== false : true;
+  const isPixelEnabled = marketing ? marketing.fb_pixel_enabled === true : false;
   const pixelId = isPixelEnabled ? (marketing?.fb_pixel_id || systemConfig?.fb_pixel_id) : null;
 
   // 1. Initialize Base Meta Pixel Code
@@ -65,8 +66,15 @@ export default function MetaPixel() {
   // 2. Track PageView on route / pathname change
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).fbq && isInitializedRef.current) {
-      if (marketing?.fb_track_page_view !== false) {
-        (window as any).fbq('track', 'PageView');
+      if (lastPathnameRef.current === null) {
+        lastPathnameRef.current = pathname;
+        return; // Prevent duplicate initial PageView on mount
+      }
+      if (lastPathnameRef.current !== pathname) {
+        lastPathnameRef.current = pathname;
+        if (marketing?.fb_track_page_view !== false) {
+          (window as any).fbq('track', 'PageView');
+        }
       }
     }
   }, [pathname, marketing]);

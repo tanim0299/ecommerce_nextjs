@@ -18,47 +18,57 @@ export const trackMetaEvent = (
 ) => {
   if (typeof window === 'undefined') return;
 
-  // 1. Dispatch to Meta Pixel (fbq) with optional eventID for deduplication
-  try {
-    if ((window as any).fbq) {
-      if (options?.eventID) {
-        (window as any).fbq('track', eventName, params, { eventID: String(options.eventID) });
-      } else {
-        (window as any).fbq('track', eventName, params);
+  const marketing = (window as any).__MARKETING_CONFIG__;
+  // Controlled solely by the backend "Enable Meta Pixel" checkbox
+  const isFbEnabled = marketing ? marketing.fb_pixel_enabled === true : Boolean((window as any).fbq);
+  // Controlled solely by the backend "Enable GTM" checkbox
+  const isGtmEnabled = marketing ? marketing.gtm_enabled === true : true;
+
+  // 1. Dispatch to Meta Pixel (fbq) ONLY if Meta Pixel is enabled in backend
+  if (isFbEnabled && (window as any).fbq) {
+    try {
+      let isEventAllowed = true;
+      if (marketing) {
+        if (eventName === 'PageView' && marketing.fb_track_page_view === false) isEventAllowed = false;
+        if (eventName === 'ViewContent' && marketing.fb_track_view_content === false) isEventAllowed = false;
+        if (eventName === 'AddToCart' && marketing.fb_track_add_to_cart === false) isEventAllowed = false;
+        if (eventName === 'InitiateCheckout' && marketing.fb_track_initiate_checkout === false) isEventAllowed = false;
+        if (eventName === 'Purchase' && marketing.fb_track_purchase === false) isEventAllowed = false;
       }
+
+      if (isEventAllowed) {
+        if (options?.eventID) {
+          (window as any).fbq('track', eventName, params, { eventID: String(options.eventID) });
+        } else {
+          (window as any).fbq('track', eventName, params);
+        }
+      }
+    } catch (e) {
+      console.debug('Meta Pixel event dispatch error:', e);
     }
-  } catch (e) {
-    console.debug('Meta Pixel event dispatch error:', e);
   }
 
-  // 2. Dispatch to Google Tag Manager (dataLayer) conforming strictly to GA4 standards
-  try {
-    (window as any).dataLayer = (window as any).dataLayer || [];
+  // 2. Dispatch to Google Tag Manager (dataLayer) ONLY if GTM is enabled in backend
+  if (isGtmEnabled) {
+    try {
+      (window as any).dataLayer = (window as any).dataLayer || [];
 
-    // GA4 Requirement: Clear previous ecommerce object before pushing new ecommerce data
-    if (params && params.ecommerce) {
-      (window as any).dataLayer.push({ ecommerce: null });
-    }
+      // GA4 Requirement: Clear previous ecommerce object before pushing new ecommerce data
+      if (params && params.ecommerce) {
+        (window as any).dataLayer.push({ ecommerce: null });
+      }
 
-    const ga4EventName = GA4_EVENT_MAP[eventName] || eventName.toLowerCase();
+      const ga4EventName = GA4_EVENT_MAP[eventName] || eventName.toLowerCase();
 
-    // Push GA4 Official Standard Event (e.g. 'view_item', 'add_to_cart', 'begin_checkout', 'purchase')
-    (window as any).dataLayer.push({
-      event: ga4EventName,
-      event_id: options?.eventID ? String(options.eventID) : undefined,
-      ...params,
-    });
-
-    // Also push the PascalCase event name (e.g. 'Purchase', 'AddToCart') if different,
-    // ensuring both standard GA4 event tags and custom Meta/GTM triggers work flawlessly
-    if (ga4EventName !== eventName) {
+      // Push ONLY single official GA4 Standard Event (e.g. 'view_item', 'add_to_cart', 'begin_checkout', 'purchase')
+      // No duplicate events pushed to dataLayer!
       (window as any).dataLayer.push({
-        event: eventName,
+        event: ga4EventName,
         event_id: options?.eventID ? String(options.eventID) : undefined,
         ...params,
       });
+    } catch (e) {
+      console.debug('DataLayer event push error:', e);
     }
-  } catch (e) {
-    console.debug('DataLayer event push error:', e);
   }
 };

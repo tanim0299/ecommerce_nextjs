@@ -219,6 +219,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
 
             setSystemConfig(data);
+            if (typeof window !== "undefined") {
+              (window as any).__SYSTEM_CONFIG__ = data;
+              (window as any).__MARKETING_CONFIG__ = data.marketing;
+            }
           }
         }
       } catch (error) {
