@@ -195,3 +195,279 @@ body {
     padding: 0 !important;
   }
 }
+
+
+/* =========================================================
+   POLICY & INFORMATIONAL PAGES RICH CONTENT STYLING
+   ========================================================= */
+.policy-rich-text {
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+@media (min-width: 640px) {
+  .policy-rich-text {
+    font-size: 16px;
+    line-height: 1.9;
+  }
+}
+
+.policy-rich-text p {
+  margin-bottom: 1.15rem;
+  color: #334155;
+}
+
+.policy-rich-text h1,
+.policy-rich-text h2,
+.policy-rich-text h3,
+.policy-rich-text h4,
+.policy-rich-text h5,
+.policy-rich-text h6 {
+  color: #0f172a;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+}
+
+.policy-rich-text h1 {
+  font-size: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 0.85rem;
+}
+
+.policy-rich-text h2 {
+  font-size: 1.25rem;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+@media (min-width: 640px) {
+  .policy-rich-text h1 { font-size: 1.75rem; }
+  .policy-rich-text h2 { font-size: 1.35rem; }
+}
+
+.policy-rich-text h3 {
+  font-size: 1.1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.policy-rich-text h4 {
+  font-size: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.policy-rich-text ul,
+.policy-rich-text ol {
+  margin-top: 0.6rem;
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.policy-rich-text ul { list-style-type: disc; }
+.policy-rich-text ol { list-style-type: decimal; }
+
+.policy-rich-text li {
+  margin-bottom: 0.5rem;
+  color: #334155;
+  line-height: 1.75;
+}
+
+.policy-rich-text strong,
+.policy-rich-text b {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.policy-rich-text a {
+  color: #ea580c;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+
+.policy-rich-text a:hover {
+  color: #c2410c;
+}
+
+.policy-rich-text blockquote {
+  margin: 1.5rem 0;
+  padding: 0.85rem 1.25rem;
+  border-left: 4px solid #f97316;
+  background-color: #fff7ed;
+  border-radius: 0 0.75rem 0.75rem 0;
+  color: #475569;
+  font-style: italic;
+}
+
+.policy-rich-text hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Responsive tables on mobile */
+.policy-rich-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 14px;
+}
+
+.policy-rich-text th,
+.policy-rich-text td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+}
+
+.policy-rich-text th {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.policy-rich-text tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.policy-rich-text img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+
+/* =========================================================
+   POLICY & INFORMATIONAL PAGES RICH CONTENT STYLING
+   ========================================================= */
+.policy-rich-text {
+  color: #334155;
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+
+@media (min-width: 640px) {
+  .policy-rich-text {
+    font-size: 15px;
+    line-height: 1.8;
+  }
+}
+
+.policy-rich-text p {
+  margin-bottom: 0.85rem;
+  color: #334155;
+}
+
+.policy-rich-text h1,
+.policy-rich-text h2,
+.policy-rich-text h3,
+.policy-rich-text h4,
+.policy-rich-text h5,
+.policy-rich-text h6 {
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.policy-rich-text h1 {
+  font-size: 1.35rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.policy-rich-text h2 {
+  font-size: 1.15rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.policy-rich-text h3 {
+  font-size: 1.05rem;
+  margin-top: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.policy-rich-text ul,
+.policy-rich-text ol {
+  margin-top: 0.4rem;
+  margin-bottom: 0.85rem;
+  padding-left: 1.25rem;
+}
+
+.policy-rich-text ul { list-style-type: disc; }
+.policy-rich-text ol { list-style-type: decimal; }
+
+.policy-rich-text li {
+  margin-bottom: 0.35rem;
+  color: #334155;
+  line-height: 1.65;
+}
+
+.policy-rich-text strong,
+.policy-rich-text b {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.policy-rich-text a {
+  color: #ea580c;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+
+.policy-rich-text a:hover {
+  color: #c2410c;
+}
+
+.policy-rich-text blockquote {
+  margin: 1rem 0;
+  padding: 0.6rem 1rem;
+  border-left: 3px solid #f97316;
+  background-color: #fff7ed;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: #475569;
+  font-style: italic;
+  font-size: 14px;
+}
+
+.policy-rich-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 13.5px;
+}
+
+.policy-rich-text th,
+.policy-rich-text td {
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+}
+
+.policy-rich-text th {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.policy-rich-text tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.policy-rich-text img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}

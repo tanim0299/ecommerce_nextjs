@@ -1,19 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import {
   ArrowLeft,
-  ChevronRight,
-  ShieldCheck,
-  Truck,
-  RotateCcw,
-  Headphones,
   Clock,
-  Sparkles,
-  CheckCircle2,
   FileText,
+  Phone,
+  Mail,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import SafeHtml from '../../components/SafeHtml';
 import { useApp } from '../../context';
@@ -65,6 +62,100 @@ export default function CustomPolicyClient({ params }: { params?: Promise<{ slug
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Horizontal Quick Tabs Scroll & Drag-by-hand state
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<HTMLAnchorElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollStartLeft, setScrollStartLeft] = useState(0);
+  const [dragDistance, setDragDistance] = useState(0);
+
+  // Check scroll position for arrows
+  const updateScrollIndicators = () => {
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    const canLeft = el.scrollLeft > 4;
+    const canRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    setCanScrollLeft(canLeft);
+    setCanScrollRight(canRight);
+  };
+
+  useEffect(() => {
+    updateScrollIndicators();
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => window.removeEventListener('resize', updateScrollIndicators);
+  }, [allPages]);
+
+  // Auto-scroll the active tab into center view smoothly
+  useEffect(() => {
+    if (activeTabRef.current && tabsContainerRef.current) {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+      setTimeout(updateScrollIndicators, 350);
+    }
+  }, [slug, allPages]);
+
+  // Mouse Drag-To-Scroll handlers (হাত দিয়ে টেনে ড্র্যাগ করা)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    setIsMouseDown(true);
+    setStartX(e.pageX - el.offsetLeft);
+    setScrollStartLeft(el.scrollLeft);
+    setDragDistance(0);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isMouseDown) return;
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startX) * 1.6;
+    el.scrollLeft = scrollStartLeft - walk;
+    setDragDistance(Math.abs(walk));
+    updateScrollIndicators();
+  };
+
+  const handleMouseUp = () => {
+    setIsMouseDown(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsMouseDown(false);
+  };
+
+  // Prevent link click navigation if user was dragging
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (dragDistance > 6) {
+      e.preventDefault();
+    }
+  };
+
+  // Mouse Wheel horizontal scroll support
+  const handleWheel = (e: React.WheelEvent) => {
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      el.scrollLeft += e.deltaY;
+      updateScrollIndicators();
+    }
+  };
+
+  // Arrow button clicks
+  const handleScrollByButton = (direction: 'left' | 'right') => {
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    const offset = direction === 'left' ? -220 : 220;
+    el.scrollBy({ left: offset, behavior: 'smooth' });
+    setTimeout(updateScrollIndicators, 300);
+  };
+
   useEffect(() => {
     const controller = new AbortController();
 
@@ -93,7 +184,7 @@ export default function CustomPolicyClient({ params }: { params?: Promise<{ slug
           throw new Error('Invalid page response.');
         }
 
-        // Fetch all pages list for sidebar
+        // Fetch all pages list for tabs navigation
         const allRes = await fetch(`${cleanUrl}/pages`, { signal: controller.signal });
         if (allRes.ok) {
           const allJson = await allRes.json();
@@ -103,9 +194,9 @@ export default function CustomPolicyClient({ params }: { params?: Promise<{ slug
           }
         }
       } catch (err: any) {
-        if (err.name === 'AbortError') return;
-        console.error('Error fetching page:', err);
-        setError(err.message || 'Page unavailable.');
+        if (err.name !== 'AbortError') {
+          setError(err.message || 'Error loading page content.');
+        }
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);
@@ -118,170 +209,199 @@ export default function CustomPolicyClient({ params }: { params?: Promise<{ slug
     return () => controller.abort();
   }, [slug]);
 
+  // Loading Skeleton State (Full Width Aligned)
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12 animate-fade-in font-sans">
-        <div className="h-6 w-48 bg-slate-100 rounded-md animate-pulse mb-6" />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8 space-y-4">
-            <div className="h-10 w-3/4 bg-slate-100 rounded-xl animate-pulse" />
-            <div className="h-4 w-32 bg-slate-100 rounded-md animate-pulse" />
-            <div className="h-40 w-full bg-slate-100 rounded-2xl animate-pulse mt-6" />
-          </div>
-          <div className="lg:col-span-4 space-y-3">
-            <div className="h-48 w-full bg-slate-100 rounded-2xl animate-pulse" />
-          </div>
+      <div className="w-full py-4 font-sans animate-fade-in">
+        <div className="h-4 w-32 bg-slate-200/80 rounded animate-pulse mb-3" />
+        <div className="h-8 w-full max-w-sm bg-slate-200/60 rounded-lg animate-pulse mb-4" />
+        <div className="w-full bg-white rounded-xl p-5 sm:p-8 border border-slate-200/70 shadow-2xs space-y-3">
+          <div className="h-6 w-2/5 bg-slate-200/80 rounded animate-pulse" />
+          <div className="h-px bg-slate-100 my-3" />
+          <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+          <div className="h-4 w-4/5 bg-slate-100 rounded animate-pulse" />
         </div>
       </div>
     );
   }
 
+  // Error / Not Found State
   if (error || !page) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center animate-fade-in">
-        <div className="w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 mx-auto mb-3">
+      <div className="w-full py-12 text-center font-sans animate-fade-in">
+        <div className="w-12 h-12 rounded-xl bg-orange-50 text-brand-orange flex items-center justify-center mx-auto mb-3 border border-orange-100">
           <FileText className="w-6 h-6" />
         </div>
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">Policy Page Not Found</h2>
-        <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
-          {error || 'The requested page is currently unavailable or may have been updated.'}
+        <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+          Page Not Found
+        </h1>
+        <p className="text-xs text-slate-500 mt-1.5 mb-5 leading-relaxed">
+          {error || 'The requested page is currently unavailable.'}
         </p>
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-orange px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all hover:bg-orange-600 shadow-orange-500/25"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-brand-orange px-4 py-2 text-xs font-semibold text-white transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Return Home</span>
+          <span>Back to Store</span>
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 animate-fade-in font-sans">
-      {/* Top Breadcrumb Bar */}
-      <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-5 border-b border-slate-200/70 pb-3 flex-wrap">
-        <Link href="/" className="hover:text-brand-orange transition-colors flex items-center gap-1 text-[11px] font-bold">
-          <ArrowLeft className="w-3 h-3" />
-          <span>HOME</span>
-        </Link>
-        <ChevronRight className="w-3 h-3 text-slate-300" />
-        <span className="text-[11px] font-bold text-slate-400 uppercase">POLICIES & INFO</span>
-        <ChevronRight className="w-3 h-3 text-slate-300" />
-        <span className="font-extrabold text-slate-900 truncate max-w-xs">{page.title}</span>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Main Content Body */}
-        <div className="lg:col-span-8 flex flex-col gap-5 bg-white rounded-3xl p-5 sm:p-8 border border-slate-100 shadow-xs">
-          {/* Header */}
-          <div className="border-b border-slate-100 pb-5">
-            <span className="text-[10px] font-black tracking-widest text-brand-orange uppercase">
-              CUSTOMER POLICY & TRANSPARENCY
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1 leading-tight">
-              {page.title}
-            </h1>
-            {page.updated_at && (
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium mt-2">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Last updated: {new Date(page.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Policy Content */}
-          <div className="prose prose-slate max-w-none text-xs sm:text-sm leading-relaxed text-slate-700 space-y-4">
-            {page.description ? (
-              <SafeHtml
-                html={page.description}
-                className="[&>h2]:text-base [&>h2]:font-black [&>h2]:text-slate-900 [&>h2]:mt-5 [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-bold [&>h3]:text-slate-900 [&>h3]:mt-4 [&>h3]:mb-2 [&>p]:leading-relaxed [&>p]:text-slate-600 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-1.5 [&>ul>li]:text-slate-600 [&>strong]:text-slate-900"
-              />
-            ) : (
-              <p className="text-slate-400 italic">No description provided for this policy page yet.</p>
-            )}
-          </div>
-
-          {/* Assurance Footer Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-6 mt-4 border-t border-slate-100">
-            <div className="flex flex-col items-center text-center p-3 rounded-2xl bg-slate-50 border border-slate-100 gap-1">
-              <Truck className="w-4 h-4 text-brand-orange" />
-              <span className="text-[10px] font-black text-slate-900">Fast Delivery</span>
-              <span className="text-[8.5px] text-slate-500">Across Bangladesh</span>
-            </div>
-            <div className="flex flex-col items-center text-center p-3 rounded-2xl bg-slate-50 border border-slate-100 gap-1">
-              <RotateCcw className="w-4 h-4 text-blue-500" />
-              <span className="text-[10px] font-black text-slate-900">7-Day Return</span>
-              <span className="text-[8.5px] text-slate-500">Hassle Free</span>
-            </div>
-            <div className="flex flex-col items-center text-center p-3 rounded-2xl bg-slate-50 border border-slate-100 gap-1">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span className="text-[10px] font-black text-slate-900">100% Genuine</span>
-              <span className="text-[8.5px] text-slate-500">Quality Checked</span>
-            </div>
-            <div className="flex flex-col items-center text-center p-3 rounded-2xl bg-slate-50 border border-slate-100 gap-1">
-              <Headphones className="w-4 h-4 text-amber-500" />
-              <span className="text-[10px] font-black text-slate-900">Live Support</span>
-              <span className="text-[8.5px] text-slate-500">7 Days a Week</span>
-            </div>
-          </div>
+    <div className="w-full py-2 sm:py-4 font-sans">
+      {/* Top Breadcrumb Navigation (Aligned with Header Logo) */}
+      <div className="flex items-center justify-between gap-2 mb-3 text-xs text-slate-500">
+        <div className="flex items-center gap-1.5">
+          <Link href="/" className="hover:text-brand-orange transition-colors">Home</Link>
+          <ChevronRight className="w-3 h-3 text-slate-300" />
+          <span className="font-semibold text-slate-800 truncate max-w-[200px] sm:max-w-xs">{page.title}</span>
         </div>
 
-        {/* Right Sidebar: Policy Navigation & Assistance */}
-        <div className="lg:col-span-4 flex flex-col gap-5">
-          {/* Other Policy Pages List */}
-          <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs flex flex-col gap-3">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-l-2 border-brand-orange pl-2.5">
-              Customer Policies
-            </h3>
-            <div className="flex flex-col divide-y divide-slate-100 text-xs">
-              {allPages.map((p) => {
-                const isActive = p.slug === slug;
-                return (
-                  <Link
-                    key={p.id}
-                    href={`/pages/${p.slug}`}
-                    className={`py-2.5 px-2.5 rounded-xl flex items-center justify-between font-bold transition-all ${
-                      isActive
-                        ? 'bg-orange-50/80 text-brand-orange shadow-2xs font-black'
-                        : 'text-slate-600 hover:text-brand-orange hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="truncate pr-2">{p.title}</span>
-                    <ChevronRight className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-brand-orange' : 'text-slate-300'}`} />
-                  </Link>
-                );
-              })}
-            </div>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-brand-orange transition-colors"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          <span>Back to Store</span>
+        </Link>
+      </div>
+
+      {/* Horizontal Quick-Switch Tabs (Drag & Swipe Supported, Aligned with Header) */}
+      {allPages.length > 1 && (
+        <div className="relative mb-3.5 group/tabs select-none">
+          {/* Left Scroll Arrow */}
+          {canScrollLeft && (
+            <button
+              type="button"
+              onClick={() => handleScrollByButton('left')}
+              className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 -ml-2 z-10 w-6 h-6 items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-600 hover:text-brand-orange hover:border-orange-300 transition-all cursor-pointer"
+              title="Scroll Left"
+              aria-label="Scroll Left"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Scroll Container with drag-to-scroll */}
+          <div
+            ref={tabsContainerRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onWheel={handleWheel}
+            onScroll={updateScrollIndicators}
+            className={`flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none touch-pan-x transition-colors ${
+              isMouseDown ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {allPages.map((p) => {
+              const isActive = p.slug === slug;
+              return (
+                <Link
+                  key={p.id}
+                  ref={isActive ? activeTabRef : null}
+                  href={`/pages/${p.slug}`}
+                  onClick={handleLinkClick}
+                  draggable={false}
+                  className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs transition-all shrink-0 font-medium select-none ${
+                    isActive
+                      ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200/80'
+                  }`}
+                >
+                  {p.title}
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Need Help Card */}
-          <div className="bg-gradient-to-br from-slate-950 to-slate-900 rounded-3xl p-5 text-white shadow-md flex flex-col gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-brand-orange">
-              <Headphones className="w-4 h-4" />
+          {/* Right Scroll Arrow */}
+          {canScrollRight && (
+            <button
+              type="button"
+              onClick={() => handleScrollByButton('right')}
+              className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 -mr-2 z-10 w-6 h-6 items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-600 hover:text-brand-orange hover:border-orange-300 transition-all cursor-pointer"
+              title="Scroll Right"
+              aria-label="Scroll Right"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Main Content Article (Container width aligned exactly with Header Logo & Actions) */}
+      <article className="w-full bg-white rounded-xl sm:rounded-2xl p-5 sm:p-8 md:p-10 border border-slate-200/80 shadow-2xs">
+        
+        {/* Header */}
+        <header className="border-b border-slate-100 pb-3.5 mb-5 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            {page.title}
+          </h1>
+
+          {page.updated_at && (
+            <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
+              <Clock className="w-3 h-3" />
+              <span>
+                Updated {new Date(page.updated_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </span>
             </div>
-            <div>
-              <h4 className="text-sm font-black tracking-tight">Need Urgent Assistance?</h4>
-              <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
-                Have questions regarding your order, refund, or size exchange? Our support team is ready to assist you.
-              </p>
+          )}
+        </header>
+
+        {/* Details Body */}
+        <div className="overflow-hidden min-h-[50px]">
+          {page.description && page.description.trim() !== '' ? (
+            <SafeHtml
+              html={page.description}
+              className="policy-rich-text"
+            />
+          ) : (
+            <div className="py-6 text-center text-slate-400">
+              <FileText className="w-7 h-7 mx-auto text-slate-300 mb-1.5 stroke-[1.5]" />
+              <p className="text-xs font-medium text-slate-500">No details have been added for this page yet.</p>
             </div>
-            <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5 text-xs">
-              {systemConfig?.phones && systemConfig.phones.length > 0 ? (
-                <a href={`tel:${systemConfig.phones[0].replace(/\s/g, '')}`} className="font-bold text-amber-400 hover:underline transition-colors w-fit">
-                  {systemConfig.phones[0]}
-                </a>
-              ) : null}
-              {systemConfig?.emails && systemConfig.emails.length > 0 && (
-                <a href={`mailto:${systemConfig.emails[0]}`} className="font-medium text-slate-300 hover:underline transition-colors w-fit text-[11px]">
-                  {systemConfig.emails[0]}
+          )}
+        </div>
+
+        {/* Clean Compact Support Note */}
+        {(systemConfig?.phones?.length || systemConfig?.emails?.length) && (
+          <footer className="mt-8 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+            <span>Need help or have questions regarding this page?</span>
+            
+            <div className="flex items-center gap-3 font-medium text-slate-600">
+              {systemConfig?.phones && systemConfig.phones.length > 0 && (
+                <a
+                  href={`tel:${systemConfig.phones[0].replace(/\s/g, '')}`}
+                  className="inline-flex items-center gap-1 hover:text-brand-orange transition-colors"
+                >
+                  <Phone className="w-3 h-3 text-slate-400" />
+                  <span>{systemConfig.phones[0]}</span>
                 </a>
               )}
-              <span className="text-[11px] text-slate-400">Customer Support Available</span>
+
+              {systemConfig?.emails && systemConfig.emails.length > 0 && (
+                <a
+                  href={`mailto:${systemConfig.emails[0]}`}
+                  className="inline-flex items-center gap-1 hover:text-brand-orange transition-colors"
+                >
+                  <Mail className="w-3 h-3 text-slate-400" />
+                  <span>{systemConfig.emails[0]}</span>
+                </a>
+              )}
             </div>
-          </div>
-        </div>
-      </div>
+          </footer>
+        )}
+
+      </article>
     </div>
   );
 }

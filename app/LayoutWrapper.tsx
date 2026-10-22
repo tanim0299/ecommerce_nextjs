@@ -868,7 +868,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </h4>
             <div className="flex flex-col gap-2.5 font-medium pl-3 text-xs">
               {apiPages && apiPages.length > 0 ? (
-                apiPages.slice(0, 4).map((p) => (
+                apiPages.map((p) => (
                   <Link
                     key={p.id}
                     href={`/pages/${p.slug}`}
@@ -977,7 +977,21 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           </div>
         </div>
 
-        
+        {/* Bottom Copyright & Legal Links Bar */}
+        <div className="border-t border-slate-900 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <p>© {new Date().getFullYear()} {systemConfig?.title || 'SLOOR'}. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
+            {apiPages && apiPages.length > 0 && apiPages.map((p) => (
+              <Link
+                key={`bottom-${p.id}`}
+                href={`/pages/${p.slug}`}
+                className="hover:text-brand-orange transition-colors"
+              >
+                {p.title}
+              </Link>
+            ))}
+          </div>
+        </div>
       </footer>
 
 
