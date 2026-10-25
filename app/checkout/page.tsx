@@ -1,5 +1,6 @@
 'use client';
 import { trackMetaEvent } from '../utils/pixel';
+import { prepareCustomerTrackingData } from '../utils/hash';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -550,7 +551,7 @@ export default function CheckoutPage() {
           console.debug('Session storage write error:', storageErr);
         }
 
-        // Meta Pixel & GTM Purchase Event with Full Customer Data
+        // Meta Pixel & GTM Purchase Event with Full Customer Data (Unhashed + SHA-256 Hashed)
         try {
           const divisionName = divisions.find(d => d.id === finalDivisionId)?.name || '';
           const districtName = districts.find(d => d.id === finalDistrictId)?.name || '';
@@ -573,6 +574,24 @@ export default function CheckoutPage() {
             ? cleanPhone
             : (cleanPhone.startsWith('88') ? `+${cleanPhone}` : (cleanPhone.startsWith('01') ? `+88${cleanPhone}` : cleanPhone));
 
+          const resolvedEmail = (finalEmail || (user?.email ? user.email : '')).trim();
+          const orderNumber = String(json.data?.order_no || '');
+          const externalId = user?.id ? String(user.id) : (orderNumber || undefined);
+
+          // Generate SHA-256 hashes and extract Meta cookies (_fbp, _fbc)
+          const customerTracking = await prepareCustomerTrackingData({
+            email: resolvedEmail || undefined,
+            phone: cleanPhone,
+            firstName,
+            lastName,
+            city: districtName,
+            state: divisionName,
+            postalCode: finalPostalCode,
+            country: countryName,
+            countryCode: 'BD',
+            externalId
+          });
+
           const orderItemsPayload = cart.map(item => ({
             item_id: String(item.id),
             item_name: item.name,
@@ -591,8 +610,8 @@ export default function CheckoutPage() {
             content_name: cart.map(c => c.name).join(', '),
             content_type: 'product',
             num_items: itemsPayload.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
-            order_id: String(json.data?.order_no || ''),
-            transaction_id: String(json.data?.order_no || ''),
+            order_id: orderNumber,
+            transaction_id: orderNumber,
 
             // Customer Details (Direct DataLayer Variables)
             customer_name: finalName,
@@ -601,8 +620,8 @@ export default function CheckoutPage() {
             customer_phone: cleanPhone,
             phone: cleanPhone,
             phone_number: formattedPhoneWithPrefix,
-            customer_email: finalEmail || '',
-            email: finalEmail || '',
+            customer_email: resolvedEmail,
+            email: resolvedEmail,
             customer_address: finalAddress,
             address: finalAddress,
             street: finalAddress,
@@ -624,6 +643,24 @@ export default function CheckoutPage() {
             customer_zip: finalPostalCode || '',
             payment_method: paymentMethod,
 
+            // SHA-256 Hashed Variables for GTM / Meta Conversions API
+            hashed_email: customerTracking.hashed_email,
+            hashed_phone: customerTracking.hashed_phone,
+            hashed_first_name: customerTracking.hashed_first_name,
+            hashed_last_name: customerTracking.hashed_last_name,
+            hashed_city: customerTracking.hashed_city,
+            hashed_region: customerTracking.hashed_region,
+            hashed_state: customerTracking.hashed_state,
+            hashed_postal_code: customerTracking.hashed_postal_code,
+            hashed_zip: customerTracking.hashed_zip,
+            hashed_country: customerTracking.hashed_country,
+            hashed_external_id: customerTracking.hashed_external_id,
+
+            // Meta Browser IDs & External ID
+            fbp: customerTracking.fbp,
+            fbc: customerTracking.fbc,
+            external_id: customerTracking.external_id,
+
             // Customer Object for GTM Custom JS / Nested Variables
             customer: {
               name: finalName,
@@ -631,7 +668,7 @@ export default function CheckoutPage() {
               last_name: lastName,
               phone: cleanPhone,
               phone_number: formattedPhoneWithPrefix,
-              email: finalEmail || '',
+              email: resolvedEmail,
               address: finalAddress,
               city: districtName,
               district: districtName,
@@ -641,15 +678,46 @@ export default function CheckoutPage() {
               zip: finalPostalCode || '',
               zip_code: finalPostalCode || '',
               country: countryName,
+              // Nested Hashed Variables
+              hashed_email: customerTracking.hashed_email,
+              hashed_phone: customerTracking.hashed_phone,
+              hashed_first_name: customerTracking.hashed_first_name,
+              hashed_last_name: customerTracking.hashed_last_name,
+              hashed_city: customerTracking.hashed_city,
+              hashed_state: customerTracking.hashed_state,
+              hashed_postal_code: customerTracking.hashed_postal_code,
+              hashed_country: customerTracking.hashed_country,
+              hashed_external_id: customerTracking.hashed_external_id,
+              fbp: customerTracking.fbp,
+              fbc: customerTracking.fbc,
+              external_id: customerTracking.external_id,
             },
 
-            // Google Ads / GA4 Enhanced Conversions Object (user_data)
+            // Official Meta Conversions API & Google Ads Enhanced Conversions Object (user_data)
             user_data: {
-              email: finalEmail || undefined,
+              // Meta CAPI Standard Parameters
+              em: customerTracking.meta_user_data.em,
+              ph: customerTracking.meta_user_data.ph,
+              fn: customerTracking.meta_user_data.fn,
+              ln: customerTracking.meta_user_data.ln,
+              ct: customerTracking.meta_user_data.ct,
+              st: customerTracking.meta_user_data.st,
+              zp: customerTracking.meta_user_data.zp,
+              country: customerTracking.meta_user_data.country,
+              external_id: customerTracking.meta_user_data.external_id,
+              fbp: customerTracking.meta_user_data.fbp,
+              fbc: customerTracking.meta_user_data.fbc,
+
+              // Google Ads / GA4 Enhanced Conversions
+              email: resolvedEmail || undefined,
               phone_number: formattedPhoneWithPrefix,
+              sha256_email_address: customerTracking.hashed_email || undefined,
+              sha256_phone_number: customerTracking.hashed_phone || undefined,
               address: {
                 first_name: firstName,
                 last_name: lastName,
+                sha256_first_name: customerTracking.hashed_first_name || undefined,
+                sha256_last_name: customerTracking.hashed_last_name || undefined,
                 street: finalAddress,
                 city: districtName || undefined,
                 region: divisionName || undefined,
@@ -660,7 +728,7 @@ export default function CheckoutPage() {
 
             // GA4 Standard Ecommerce Object
             ecommerce: {
-              transaction_id: String(json.data?.order_no || ''),
+              transaction_id: orderNumber,
               value: Number(json.data?.grand_total || total),
               tax: 0,
               shipping: Number(shippingCost),
@@ -669,7 +737,7 @@ export default function CheckoutPage() {
               items: orderItemsPayload,
             }
           }, {
-            eventID: String(json.data?.order_no || '')
+            eventID: orderNumber
           });
         } catch (e) {
           console.debug('Purchase tracking error:', e);
