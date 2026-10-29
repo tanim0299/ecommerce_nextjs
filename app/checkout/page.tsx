@@ -1,6 +1,7 @@
 'use client';
 import { trackMetaEvent } from '../utils/pixel';
 import { prepareCustomerTrackingData } from '../utils/hash';
+import { getCartToken, resetCartToken, syncCart } from '../utils/cartSync';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -134,7 +135,9 @@ export default function CheckoutPage() {
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: string; value: number } | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
 
   // Payment Method: Default is 'cod' (Cash On Delivery)
   const [paymentMethod, setPaymentMethod] = useState<'cod'>('cod');
@@ -394,7 +397,7 @@ export default function CheckoutPage() {
 
   // Pricing calculations
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountAmount = Math.round((subtotal * discountPercent) / 100);
+  const discountAmount = couponDiscount;
 
   // Delivery zone resolution
   const selectedSavedAddr = savedAddresses.find(a => a.id === selectedAddressId);
@@ -433,14 +436,95 @@ export default function CheckoutPage() {
   const shippingCost = cart.length === 0 ? 0 : baseDeliveryFee;
   const total = subtotal - discountAmount + shippingCost;
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  // Ask the backend what a coupon is worth for the current subtotal.
+  const checkCoupon = async (code: string) => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+    const res = await fetch(`${cleanUrl}/coupons/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ code, subtotal }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.status !== 'success') {
+      throw new Error(json.message || 'Invalid coupon code.');
+    }
+    return json.data as { code: string; discount_type: string; discount_value: number; discount_amount: number };
+  };
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCode.trim()) {
       showToast('Please enter a coupon code.', 'error');
       return;
     }
-    showToast('This coupon code is not active or has expired.', 'error');
+    setIsCheckingCoupon(true);
+    try {
+      const data = await checkCoupon(couponCode.trim());
+      setAppliedCoupon({ code: data.code, type: data.discount_type, value: Number(data.discount_value) });
+      setCouponDiscount(Number(data.discount_amount));
+      setCouponCode(data.code);
+      showToast('Coupon applied successfully.', 'success');
+    } catch (err) {
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+      showToast(err instanceof Error ? err.message : 'Invalid coupon code.', 'error');
+    } finally {
+      setIsCheckingCoupon(false);
+    }
   };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCode('');
+  };
+
+  // Keep the discount correct when the cart changes after a coupon was applied.
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    let cancelled = false;
+    checkCoupon(appliedCoupon.code)
+      .then((data) => {
+        if (!cancelled) setCouponDiscount(Number(data.discount_amount));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setAppliedCoupon(null);
+        setCouponDiscount(0);
+        showToast(err instanceof Error ? err.message : 'Coupon is no longer valid.', 'error');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal]);
+
+  // A coupon carried over from an abandoned-cart email is applied once, automatically.
+  useEffect(() => {
+    if (cart.length === 0) return;
+    let pending: string | null = null;
+    try {
+      pending = localStorage.getItem('pending_coupon');
+      if (pending) localStorage.removeItem('pending_coupon');
+    } catch {
+      return;
+    }
+    if (!pending) return;
+
+    setCouponCode(pending);
+    checkCoupon(pending)
+      .then((data) => {
+        setAppliedCoupon({ code: data.code, type: data.discount_type, value: Number(data.discount_value) });
+        setCouponDiscount(Number(data.discount_amount));
+        setCouponCode(data.code);
+        showToast(`Coupon ${data.code} applied.`, 'success');
+      })
+      .catch(() => {
+        // Expired or not applicable: leave the code in the box, the customer can try again.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.length > 0]);
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -524,7 +608,8 @@ export default function CheckoutPage() {
         district_id: finalDistrictId ? Number(finalDistrictId) : null,
         upazila_id: finalUpazilaId ? Number(finalUpazilaId) : null,
         payment_method: paymentMethod,
-        coupon_code: couponCode ? couponCode.trim() : null,
+        coupon_code: appliedCoupon ? appliedCoupon.code : null,
+        cart_token: getCartToken(),
         items: itemsPayload
       };
 
@@ -733,7 +818,7 @@ export default function CheckoutPage() {
               tax: 0,
               shipping: Number(shippingCost),
               currency: 'BDT',
-              coupon: couponCode ? couponCode.trim() : undefined,
+              coupon: appliedCoupon ? appliedCoupon.code : undefined,
               items: orderItemsPayload,
             }
           }, {
@@ -746,6 +831,7 @@ export default function CheckoutPage() {
         // Clear Cart
         setCart([]);
         localStorage.removeItem('cart');
+        resetCartToken();
 
         // Smoothly redirect to the thank-you / order confirmation page
         const orderNo = json.data?.order_no || '';
@@ -1140,6 +1226,7 @@ export default function CheckoutPage() {
                         placeholder="e.g. 01712345678"
                         value={billingPhone}
                         onChange={(e) => setBillingPhone(e.target.value)}
+                        onBlur={() => syncCart(cart, { email: billingEmail, phone: billingPhone, name: billingName }, token)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
                       />
                     </div>
@@ -1201,9 +1288,13 @@ export default function CheckoutPage() {
                         placeholder="e.g. user@example.com"
                         value={billingEmail}
                         onChange={(e) => setBillingEmail(e.target.value)}
+                        onBlur={() => syncCart(cart, { email: billingEmail, phone: billingPhone, name: billingName }, token)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
                       />
                     </div>
+                    <p className="text-[10px] text-slate-400 leading-snug">
+                      If you leave items in your cart we may email you a reminder. You can unsubscribe at any time.
+                    </p>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
@@ -1321,15 +1412,22 @@ export default function CheckoutPage() {
                   type="text"
                   placeholder="Coupon Code"
                   value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value);
+                    if (appliedCoupon && e.target.value.trim().toUpperCase() !== appliedCoupon.code) {
+                      handleRemoveCoupon();
+                      setCouponCode(e.target.value);
+                    }
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400"
                 />
               </div>
               <button
                 type="submit"
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase rounded-lg transition-colors cursor-pointer"
+                disabled={isCheckingCoupon}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-bold text-xs uppercase rounded-lg transition-colors cursor-pointer"
               >
-                Apply
+                {isCheckingCoupon ? '...' : 'Apply'}
               </button>
             </form>
 
@@ -1339,9 +1437,19 @@ export default function CheckoutPage() {
                 <span>Subtotal</span>
                 <span>BDT {subtotal}</span>
               </div>
-              {discountPercent > 0 && (
+              {appliedCoupon && couponDiscount > 0 && (
                 <div className="flex justify-between items-center text-emerald-600 font-bold">
-                  <span>Coupon Discount ({discountPercent}%)</span>
+                  <span>
+                    Coupon ({appliedCoupon.code}
+                    {appliedCoupon.type === 'percent' ? ' · ' + appliedCoupon.value + '%' : ''}){' '}
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="ml-1 text-[10px] font-semibold text-slate-400 hover:text-red-500 underline cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </span>
                   <span>- BDT {discountAmount}</span>
                 </div>
               )}

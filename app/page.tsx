@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,6 +17,8 @@ import {
 import { useApp, getProductUrl } from './context';
 import ProductQuickView from './components/ProductQuickView';
 import WatchBeforeBuyModal from './components/WatchBeforeBuyModal';
+import WhyChooseUs from './components/WhyChooseUs';
+import CustomerReviewsShowcase from './components/CustomerReviewsShowcase';
 
 interface SliderItem {
   id: number;
@@ -154,9 +156,133 @@ const getEmbedPlayerUrl = (url?: string | null) => {
   return url;
 };
 
+interface ProductSectionProps {
+  sectionId: string | number;
+  subTitle?: string | null;
+  title?: string | null;
+  viewAllUrl?: string;
+  children: React.ReactNode;
+}
+
+function ProductSectionCarousel({
+  sectionId,
+  subTitle,
+  title,
+  viewAllUrl = '/shop',
+  children,
+}: ProductSectionProps) {
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Auto-slide effect: Slide 1 product -> Pause 3.8s -> Slide next product
+  useEffect(() => {
+    const el = sliderRef.current;
+    if (!el || isHovered) return;
+
+    const interval = setInterval(() => {
+      if (!el) return;
+      const firstChild = el.firstElementChild as HTMLElement | null;
+      const step = firstChild ? firstChild.offsetWidth + 16 : 286;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+
+      if (maxScroll <= 15) return; // Not enough items to slide
+
+      if (el.scrollLeft >= maxScroll - 25) {
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ left: step, behavior: 'smooth' });
+      }
+    }, 3800);
+
+    return () => clearInterval(interval);
+  }, [isHovered]);
+
+  const handlePrev = () => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const firstChild = el.firstElementChild as HTMLElement | null;
+    const step = firstChild ? firstChild.offsetWidth + 16 : 286;
+    el.scrollBy({ left: -step, behavior: 'smooth' });
+  };
+
+  const handleNext = () => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const firstChild = el.firstElementChild as HTMLElement | null;
+    const step = firstChild ? firstChild.offsetWidth + 16 : 286;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (el.scrollLeft >= maxScroll - 25) {
+      el.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      el.scrollBy({ left: step, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <section
+      className="flex flex-col gap-3 w-full mt-4"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setIsHovered(false)}
+    >
+      <div className="flex items-end justify-between border-b border-slate-200/60 pb-2.5">
+        <div className="flex flex-col gap-0.5">
+          {subTitle && (
+            <span className="text-[9.5px] md:text-[11px] font-black tracking-[0.2em] text-brand-orange uppercase">
+              {subTitle}
+            </span>
+          )}
+          <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+            {title}
+            <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href={viewAllUrl}
+            className="text-xs font-bold text-brand-orange hover:text-orange-600 flex items-center gap-0.5 transition-colors sm:hidden"
+          >
+            <span>View All</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+
+          <div className="hidden sm:flex items-center gap-1.5">
+            <button
+              onClick={handlePrev}
+              aria-label="Previous slide"
+              className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleNext}
+              aria-label="Next slide"
+              className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        ref={sliderRef}
+        id={`home-section-slider-${sectionId}`}
+        className="w-full flex overflow-x-auto gap-3 sm:gap-4 py-1 sm:py-2 scroll-smooth snap-x snap-mandatory no-scrollbar"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSliderHovered, setIsSliderHovered] = useState(false);
   const [sliders, setSliders] = useState<SliderItem[]>([]);
   const [isSlidersLoading, setIsSlidersLoading] = useState(true);
   const [featuredSubCategories, setFeaturedSubCategories] = useState<FeaturedSubCategory[]>([]);
@@ -364,7 +490,7 @@ export default function Home() {
       <div
         key={prod.id || idx}
         className={`${isSliderCard
-          ? 'w-full sm:w-[240px] md:w-[270px] sm:shrink-0 sm:snap-start'
+          ? 'w-[175px] sm:w-[240px] md:w-[270px] shrink-0 snap-start'
           : 'w-full min-w-0'
           } bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-amber-500/40 shadow-xs hover:shadow-2xl transition-all duration-300 sm:hover:-translate-y-2 flex flex-col group relative`}
       >
@@ -515,14 +641,14 @@ export default function Home() {
     );
   };
 
-  // Auto-play Slider
+  // Auto-play Slider (Smooth Slide -> 4.5s Pause -> Next Slide)
   useEffect(() => {
-    if (sliders.length === 0) return;
+    if (sliders.length <= 1 || isSliderHovered) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % sliders.length);
-    }, 5000);
+    }, 4500);
     return () => clearInterval(interval);
-  }, [currentSlide, sliders]);
+  }, [sliders.length, isSliderHovered, currentSlide]);
 
   // Autoplay Category Slider (Endless/Infinite Scroll)
   useEffect(() => {
@@ -564,7 +690,11 @@ export default function Home() {
 
       <>
           {/* Gorgeous Premium Hero Slider (Edge to Edge Full Width) */}
-          <section className="relative w-full aspect-[2/1] sm:aspect-[2.4/1] md:aspect-[2.8/1] lg:aspect-[3.2/1] min-h-[380px] sm:min-h-[460px] md:min-h-[540px] bg-slate-950 overflow-hidden group">
+          <section
+            onMouseEnter={() => setIsSliderHovered(true)}
+            onMouseLeave={() => setIsSliderHovered(false)}
+            className="relative w-full aspect-[2/1] sm:aspect-[2.4/1] md:aspect-[2.8/1] lg:aspect-[3.2/1] min-h-[380px] sm:min-h-[460px] md:min-h-[540px] bg-slate-950 overflow-hidden group select-none"
+          >
             {isSlidersLoading ? (
               <div className="w-full h-full shimmer-effect-light flex flex-col justify-center items-end p-8 md:p-16 gap-3">
                 <div className="h-3.5 w-32 bg-white/40 rounded-lg" />
@@ -578,9 +708,12 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div className="w-full h-full relative">
+                {/* Horizontal Sliding Carousel Track */}
+                <div
+                  className="flex w-full h-full transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                >
                   {sliders.map((slide, idx) => {
-                    const isActive = idx === currentSlide;
                     const isVideo = slide.type === 'video' || !!slide.video || !!slide.video_url;
                     const hasTextOverlay = !!(slide.short_title || slide.title || slide.description);
                     const rawVideo = slide.video || slide.video_url || '';
@@ -589,9 +722,7 @@ export default function Home() {
                     return (
                       <div
                         key={slide.id || idx}
-                        className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${
-                          isActive ? "opacity-100 scale-100 z-10" : "opacity-0 scale-[1.03] z-0 pointer-events-none"
-                        }`}
+                        className="w-full h-full shrink-0 relative overflow-hidden"
                       >
                         {/* Background Media */}
                         {isVideo && videoSrc ? (
@@ -603,23 +734,19 @@ export default function Home() {
                             loop
                             muted
                             playsInline
-                            className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${
-                              isActive ? "scale-100" : "scale-105"
-                            }`}
+                            className="w-full h-full object-cover"
                           />
                         ) : slide.image ? (
                           <img
                             src={resolveImageUrl(slide.image)}
                             alt={slide.title || `Promo Slide ${idx + 1}`}
-                            className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${
-                              isActive ? "scale-100" : "scale-105"
-                            }`}
+                            className="w-full h-full object-cover"
                           />
                         ) : (
                           <div className="w-full h-full bg-slate-900" />
                         )}
 
-                        {/* Premium Luxury Typography & Placement-Aware Gradient Overlay */}
+                        {/* Premium Typography & Placement-Aware Gradient Overlay */}
                         {hasTextOverlay && (() => {
                           const placement = slide.text_placement || 'right';
                           const isLeft = placement === 'left';
@@ -642,11 +769,13 @@ export default function Home() {
                                     {slide.short_title}
                                   </div>
                                 )}
+
                                 {slide.title && (
-                                  <h2 className="font-montserrat text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white uppercase tracking-tight leading-[1.02] drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)] max-w-2xl">
+                                  <h1 className={`font-montserrat font-black text-2xl sm:text-4xl md:text-5xl lg:text-6xl text-white tracking-tight uppercase leading-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] ${descAlignClass}`}>
                                     {slide.title}
-                                  </h2>
+                                  </h1>
                                 )}
+
                                 {slide.description && (
                                   <p className={`font-outfit text-xs sm:text-sm md:text-base text-slate-200/90 font-normal leading-relaxed max-w-lg drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${descAlignClass}`}>
                                     {slide.description}
@@ -715,6 +844,8 @@ export default function Home() {
 
           {/* Centered Main Page Sections Wrapper */}
           <div className="w-full max-w-7xl mx-auto px-4 flex flex-col gap-6 md:gap-8 mt-4 md:mt-8">
+
+
 
           {/* Watch Before You Buy Section (Matching reference design) */}
           {watchVideos.length > 0 && (
@@ -900,65 +1031,20 @@ export default function Home() {
             </section>
           )}
 
-          {/* Dynamic Home Page Sections from Admin */}
+          {/* Dynamic Home Page Sections from Admin (Hot Sale, New Arrival, etc. with Auto-Slide) */}
           {homePageSections.map(section => {
             if (!section.products || section.products.length === 0) return null;
 
             return (
-              <section key={`section-${section.id}`} className="flex flex-col gap-3 w-full mt-4">
-                <div className="flex items-end justify-between border-b border-slate-200/60 pb-2.5">
-                  <div className="flex flex-col gap-0.5">
-                    {section.sub_title && (
-                      <span className="text-[9.5px] md:text-[11px] font-black tracking-[0.2em] text-brand-orange uppercase">
-                        {section.sub_title}
-                      </span>
-                    )}
-                    <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                      {section.title}
-                      <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-                    </h2>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href="/shop"
-                      className="text-xs font-bold text-brand-orange hover:text-orange-600 flex items-center gap-0.5 transition-colors sm:hidden"
-                    >
-                      <span>View All</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Link>
-
-                    <div className="hidden sm:flex items-center gap-1.5">
-                      <button
-                        onClick={() => {
-                          const el = document.getElementById(`home-section-slider-${section.id}`);
-                          if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
-                        }}
-                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const el = document.getElementById(`home-section-slider-${section.id}`);
-                          if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
-                        }}
-                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  id={`home-section-slider-${section.id}`}
-                  className="w-full grid grid-cols-2 gap-2.5 sm:gap-4 sm:flex sm:overflow-x-auto py-1 sm:py-2 sm:scroll-smooth sm:snap-x sm:snap-mandatory sm:no-scrollbar"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  {section.products.map((product, idx) => renderProductCard(product, idx, true))}
-                </div>
-              </section>
+              <ProductSectionCarousel
+                key={`section-${section.id}`}
+                sectionId={section.id}
+                subTitle={section.sub_title}
+                title={section.title}
+                viewAllUrl="/shop"
+              >
+                {section.products.map((product, idx) => renderProductCard(product, idx, true))}
+              </ProductSectionCarousel>
             );
           })}
 
@@ -968,71 +1054,28 @@ export default function Home() {
             if (categoryProducts.length === 0) return null;
 
             return (
-              <section key={`cat-${homeCat.id}`} className="flex flex-col gap-3 w-full mt-4">
-                <div className="flex items-end justify-between border-b border-slate-200/60 pb-2.5">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[9.5px] md:text-[11px] font-black tracking-[0.2em] text-brand-orange uppercase">
-                      {homeCat.item?.name || 'Premium Apparel'}
-                    </span>
-                    <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                      {homeCat.home_page_title || homeCat.name}
-                      <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-                    </h2>
+              <ProductSectionCarousel
+                key={`cat-${homeCat.id}`}
+                sectionId={`cat-${homeCat.id}`}
+                subTitle={homeCat.item?.name || 'Premium Apparel'}
+                title={homeCat.home_page_title || homeCat.name}
+                viewAllUrl={`/shop?category=${homeCat.slug || (homeCat.name || '').toLowerCase()}`}
+              >
+                {isProductsLoading ? (
+                  Array.from({ length: 4 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="w-[175px] sm:w-[240px] md:w-[270px] shrink-0 aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse snap-start"
+                    />
+                  ))
+                ) : categoryProducts.length > 0 ? (
+                  categoryProducts.map((product, idx) => renderProductCard(product, idx, true))
+                ) : (
+                  <div className="w-full flex items-center justify-center py-6">
+                    <span className="text-xs text-slate-400 font-semibold">No products available.</span>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/shop?category=${homeCat.slug || (homeCat.name || '').toLowerCase()}`}
-                      className="text-xs font-bold text-brand-orange hover:text-orange-600 flex items-center gap-0.5 transition-colors sm:hidden"
-                    >
-                      <span>View All</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Link>
-
-                    <div className="hidden sm:flex items-center gap-1.5">
-                      <button
-                        onClick={() => {
-                          const el = document.getElementById(`home-cat-slider-${homeCat.id}`);
-                          if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
-                        }}
-                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const el = document.getElementById(`home-cat-slider-${homeCat.id}`);
-                          if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
-                        }}
-                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-brand-orange bg-white text-slate-700 hover:text-brand-orange flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  id={`home-cat-slider-${homeCat.id}`}
-                  className="w-full grid grid-cols-2 gap-2.5 sm:gap-4 sm:flex sm:overflow-x-auto py-1 sm:py-2 sm:scroll-smooth sm:snap-x sm:snap-mandatory sm:no-scrollbar"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  {isProductsLoading ? (
-                    Array.from({ length: 4 }).map((_, idx) => (
-                      <div
-                        key={idx}
-                        className="w-full sm:min-w-[210px] md:min-w-[240px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse sm:snap-start"
-                      />
-                    ))
-                  ) : categoryProducts.length > 0 ? (
-                    categoryProducts.map((product, idx) => renderProductCard(product, idx, true))
-                  ) : (
-                    <div className="col-span-2 w-full flex items-center justify-center py-6">
-                      <span className="text-xs text-slate-400 font-semibold">No products available.</span>
-                    </div>
-                  )}
-                </div>
-              </section>
+                )}
+              </ProductSectionCarousel>
             );
           })}
 
@@ -1042,73 +1085,36 @@ export default function Home() {
             if (categoryProducts.length === 0) return null;
 
             return (
-            <section key={`subcat-${homeCat.id}`} className="flex flex-col gap-3 w-full mt-4">
-              <div className="flex items-end justify-between border-b border-slate-200/60 pb-2.5">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[9.5px] md:text-[11px] font-black tracking-[0.2em] text-brand-orange uppercase">
-                    {homeCat.category?.name || homeCat.item?.name || 'Premium Apparel'}
-                  </span>
-                  <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                    {homeCat.home_page_title || homeCat.name}
-                    <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-                  </h2>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/shop?sub_category=${homeCat.slug || (homeCat.name || '').toLowerCase()}`}
-                    className="text-xs font-bold text-brand-orange hover:text-orange-600 flex items-center gap-0.5 transition-colors sm:hidden"
-                  >
-                    <span>View All</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
-
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        const el = document.getElementById(`home-slider-${homeCat.id}`);
-                        if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
-                      }}
-                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        const el = document.getElementById(`home-slider-${homeCat.id}`);
-                        if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
-                      }}
-                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-slate-200 hover:border-amber-500 bg-white text-slate-700 hover:text-amber-500 flex items-center justify-center transition-all duration-300 shadow-2xs hover:shadow-xs cursor-pointer hover:scale-105 active:scale-95"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                id={`home-slider-${homeCat.id}`}
-                className="w-full grid grid-cols-2 gap-2.5 sm:gap-4 sm:flex sm:overflow-x-auto py-1 sm:py-2 sm:scroll-smooth sm:snap-x sm:snap-mandatory sm:no-scrollbar"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              <ProductSectionCarousel
+                key={`subcat-${homeCat.id}`}
+                sectionId={`subcat-${homeCat.id}`}
+                subTitle={homeCat.category?.name || homeCat.item?.name || 'Premium Apparel'}
+                title={homeCat.home_page_title || homeCat.name}
+                viewAllUrl={`/shop?sub_category=${homeCat.slug || (homeCat.name || '').toLowerCase()}`}
               >
                 {isProductsLoading ? (
                   Array.from({ length: 4 }).map((_, idx) => (
                     <div
                       key={idx}
-                      className="w-full sm:min-w-[210px] md:min-w-[240px] aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse sm:snap-start"
+                      className="w-[175px] sm:w-[240px] md:w-[270px] shrink-0 aspect-[3/4] rounded-2xl bg-slate-100 animate-pulse snap-start"
                     />
                   ))
                 ) : categoryProducts.length > 0 ? (
                   categoryProducts.map((product, idx) => renderProductCard(product, idx, true))
                 ) : (
-                  <div className="col-span-2 w-full flex items-center justify-center py-6">
+                  <div className="w-full flex items-center justify-center py-6">
                     <span className="text-xs text-slate-400 font-semibold">No products available.</span>
                   </div>
                 )}
-              </div>
-            </section>
+              </ProductSectionCarousel>
             );
           })}
+
+          {/* Why Choose Us Feature Cards Section (After Product Listings) */}
+            <WhyChooseUs />
+
+          {/* Customer Reviews (Google-style, below Why Choose Us) */}
+            <CustomerReviewsShowcase />
 
           </div>
         </>
