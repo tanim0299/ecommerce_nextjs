@@ -32,6 +32,7 @@ import {
   Mic
 } from 'lucide-react';
 import { useApp, getProductUrl } from './context';
+import { isProductMatch, filterAndSortByRelevance } from './utils/searchRelevance';
 
 type WishlistPrice = number | string | null;
 
@@ -59,81 +60,7 @@ const formatWishlistPrice = (value: number) => new Intl.NumberFormat('en-BD', {
   maximumFractionDigits: 2,
 }).format(value);
 
-function getDiceSimilarity(str1: string, str2: string): number {
-  if (str1 === str2) return 1.0;
-  if (str1.length < 2 || str2.length < 2) return 0;
-  const getBigrams = (str: string) => {
-    const bigrams = [];
-    for (let i = 0; i < str.length - 1; i++) {
-      bigrams.push(str.substring(i, i + 2));
-    }
-    return bigrams;
-  };
-  const b1 = getBigrams(str1);
-  const b2 = getBigrams(str2);
-  let intersection = 0;
-  const used = new Set<number>();
-  for (let i = 0; i < b1.length; i++) {
-    for (let j = 0; j < b2.length; j++) {
-      if (b1[i] === b2[j] && !used.has(j)) {
-        intersection++;
-        used.add(j);
-        break;
-      }
-    }
-  }
-  return (2.0 * intersection) / (b1.length + b2.length);
-}
-
-function calculateSimilarity(productName: string, query: string): number {
-  const normName = productName.toLowerCase().trim();
-  const normQuery = query.toLowerCase().trim();
-  if (!normName || !normQuery) return 0;
-  if (normName.includes(normQuery)) return 1.0;
-  
-  const queryWords = normQuery.split(/\s+/).filter(Boolean);
-  const nameWords = normName.split(/\s+/).filter(Boolean);
-  if (queryWords.length === 0) return 0;
-  
-  let matchCount = 0;
-  for (const qWord of queryWords) {
-    let found = false;
-    for (const nWord of nameWords) {
-      if (nWord.includes(qWord) || qWord.includes(nWord)) {
-        found = true;
-        break;
-      }
-    }
-    if (found) {
-      matchCount++;
-    } else {
-      let maxWordSim = 0;
-      for (const nWord of nameWords) {
-        const sim = getDiceSimilarity(qWord, nWord);
-        if (sim > maxWordSim) maxWordSim = sim;
-      }
-      matchCount += maxWordSim;
-    }
-  }
-  return matchCount / queryWords.length;
-}
-
-function isProductMatch(product: WishlistProduct, query: string): boolean {
-  const normQuery = query.toLowerCase().trim();
-  if (!normQuery) return false;
-  
-  // 1. Check SKU match
-  if (product.sku && product.sku.toLowerCase().includes(normQuery)) return true;
-  if (product.variants && product.variants.some(v => v.sku && v.sku.toLowerCase().includes(normQuery))) return true;
-  
-  // 2. Check Name similarity (>= 40% similarity)
-  if (product.name) {
-    const similarity = calculateSimilarity(product.name, normQuery);
-    if (similarity >= 0.40) return true;
-  }
-  
-  return false;
-}
+// Smart relevance search imported from ./utils/searchRelevance
 
 
 // Helper lists to render header links
@@ -243,6 +170,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       '/checkout': `Secure Checkout | ${siteTitle}`,
       '/profile': `My Profile | ${siteTitle}`,
       '/track-order': `Track Order | ${siteTitle}`,
+      '/reviews': `Customer Reviews | ${siteTitle}`,
       '/stores': `Store Outlets | ${siteTitle}`,
       '/contact': `Contact Us | ${siteTitle}`,
       '/about': `About Us | ${siteTitle}`,
@@ -276,7 +204,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   const matchedSuggestions = React.useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return apiProducts.filter(product => isProductMatch(product, searchQuery)).slice(0, 10);
+    return filterAndSortByRelevance(apiProducts, searchQuery).slice(0, 8);
   }, [apiProducts, searchQuery]);
 
   const handleSearchSubmit = (query: string) => {
@@ -533,11 +461,12 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         </span>
       </div>
 
-      {/* Gorgeous Compact Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-150 px-4 sm:px-6 py-2 flex flex-col gap-1.5 shadow-xs">
-        {/* First Row: Logo, Search, Actions */}
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
+      {/* Unified Single-Line Header */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-2.5 shadow-xs">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3 lg:gap-6">
+          
+          {/* Left: Mobile Menu Toggle + Logo */}
+          <div className="flex items-center gap-2.5 shrink-0">
             {/* Hamburger Button for Mobile */}
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
@@ -548,165 +477,22 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </button>
 
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-1.5 group">
+            <Link href="/" className="flex items-center gap-1.5 group shrink-0">
               {renderLogo(false)}
             </Link>
           </div>
 
-          {/* Search bar */}
-          <div className="flex-1 max-w-2xl relative hidden md:block mx-2 lg:mx-6" ref={desktopSearchRef}>
-            <div className="relative w-full">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search premium apparel..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowSearchSuggestions(e.target.value.length > 0);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearchSubmit(searchQuery);
-                  }
-                }}
-                className="w-full h-10 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200/90 rounded-full pl-10 pr-10 text-xs sm:text-[13px] font-medium focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 text-slate-800 placeholder-slate-400 transition-all shadow-2xs"
-              />
-              <button
-                type="button"
-                onClick={startVoiceSearch}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
-                title="Search by voice"
-              >
-                <Mic className={`w-4 h-4 ${isVoiceModalOpen ? 'text-brand-orange animate-pulse' : ''}`} />
-              </button>
-              {renderSearchSuggestions()}
-            </div>
-          </div>
-
-          {/* Header Action Buttons */}
-          <div className="flex items-center gap-3.5 sm:gap-4">
-            {/* Search Toggle for Mobile */}
-            <button 
-              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-              className="md:hidden flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer"
-            >
-              <Search className="w-5 h-5 stroke-[1.5]" />
-              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500">Search</span>
-            </button>
-
-            {/* Outlet Stores / Store Locator Modal */}
-            <button
-              type="button"
-              onClick={() => setIsStoreModalOpen(true)}
-              className="flex flex-col items-center gap-0.5 transition-colors cursor-pointer group text-slate-700 hover:text-brand-orange"
-              title="Store Locator"
-            >
-              <MapPin className="w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform" />
-              <span className="text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 text-slate-500">Stores</span>
-            </button>
-
-            {/* Profile */}
-            <Link 
-              href={user ? "/profile" : "/login"}
-              className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group text-center"
-            >
-              {headerAvatar ? (
-                <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-200 group-hover:scale-105 transition-transform flex items-center justify-center bg-slate-100 flex-shrink-0">
-                  <img 
-                    src={headerAvatar} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover" 
-                  />
-                </div>
-              ) : (
-                <User className="w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform" />
-              )}
-              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">
-                {user ? user.name.split(' ')[0] : 'Profile'}
-              </span>
-            </Link>
-
-            {/* Wishlist */}
-            <button 
-              onClick={() => setIsWishlistOpen(true)}
-              className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group"
-            >
-              <div className="relative">
-                <Heart className={`w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform ${likedProducts.length > 0 ? 'fill-brand-orange text-brand-orange' : ''}`} />
-                {likedProducts.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center">
-                    {likedProducts.length}
-                  </span>
-                )}
-              </div>
-              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">Wishlist</span>
-            </button>
-
-            {/* Bag */}
-            <button
-              id="header-cart-btn"
-              onClick={() => setIsCartOpen(true)}
-              className={`flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-all cursor-pointer group ${
-                isBagShaking ? 'animate-cart-shake text-brand-orange scale-105' : ''
+          {/* Center Navigation Menu (Merged into Same Line) */}
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-6 text-[11px] font-extrabold uppercase tracking-wider text-slate-800">
+            <Link
+              href="/shop"
+              aria-current={pathname === '/shop' ? 'page' : undefined}
+              className={`py-1.5 transition-colors ${
+                pathname === '/shop' ? 'text-brand-orange font-black' : 'hover:text-brand-orange'
               }`}
             >
-              <div className="relative">
-                <ShoppingBag className={`w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform ${
-                  isBagShaking ? 'text-brand-orange scale-110' : ''
-                }`} />
-                {cart.length > 0 && (
-                  <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center transition-all ${
-                    isBagShaking ? 'animate-bounce ring-2 ring-orange-300' : ''
-                  }`}>
-                    {cart.reduce((sum, i) => sum + i.quantity, 0)}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${
-                isBagShaking ? 'text-brand-orange font-black' : 'text-slate-500'
-              }`}>Bag</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Search Row (Toggled) */}
-        {isMobileSearchOpen && (
-          <div className="w-full md:hidden px-2 pb-1 bg-white" ref={mobileSearchRef}>
-            <div className="relative w-full">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search premium apparel..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowSearchSuggestions(e.target.value.length > 0);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearchSubmit(searchQuery);
-                  }
-                }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-10 py-1.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={startVoiceSearch}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
-                title="Search by voice"
-              >
-                <Mic className={`w-4 h-4 ${isVoiceModalOpen ? 'text-brand-orange animate-pulse' : ''}`} />
-              </button>
-              {renderSearchSuggestions()}
-            </div>
-          </div>
-        )}
-
-        {/* Second Row: Mega Menu Navigation Centered */}
-        <div className="w-full hidden lg:flex justify-center border-t border-slate-100 pt-1">
-          <nav className="flex items-center gap-6 text-[11px] font-extrabold uppercase tracking-wider text-slate-800">
+              <span>Shop</span>
+            </Link>
             {apiItems
               .filter((item) => item.is_show_header == 1 || item.is_show_header === true)
               .map((item) => {
@@ -789,14 +575,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   </div>
                 );
               })}
-            <button
-              type="button"
-              onClick={() => setIsStoreModalOpen(true)}
-              className="flex items-center gap-1.5 py-1.5 transition-colors hover:text-brand-orange cursor-pointer"
-            >
-              <MapPin className="h-3.5 w-3.5" />
-              Store Locator
-            </button>
             <Link
               href="/track-order"
               aria-current={pathname === '/track-order' ? 'page' : undefined}
@@ -805,10 +583,161 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               }`}
             >
               <PackageSearch className="h-3.5 w-3.5" />
-              Track Order
+              <span>Track Order</span>
+            </Link>
+            <Link
+              href="/reviews"
+              aria-current={pathname === '/reviews' ? 'page' : undefined}
+              className={`flex items-center gap-1.5 py-1.5 transition-colors ${
+                pathname === '/reviews' ? 'text-brand-orange' : 'hover:text-brand-orange'
+              }`}
+            >
+              <Star className="h-3.5 w-3.5" />
+              <span>Reviews</span>
             </Link>
           </nav>
+
+          {/* Right: Search Bar + Action Buttons */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+            {/* Search bar moved to right side */}
+            <div className="relative hidden md:block w-36 lg:w-44 xl:w-56" ref={desktopSearchRef}>
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search kicks..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchSuggestions(e.target.value.length > 0);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearchSubmit(searchQuery);
+                    }
+                  }}
+                  className="w-full h-8.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200/90 rounded-full pl-8.5 pr-8 text-xs font-medium focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 text-slate-800 placeholder-slate-400 transition-all shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={startVoiceSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
+                  title="Search by voice"
+                >
+                  <Mic className={`w-3.5 h-3.5 ${isVoiceModalOpen ? 'text-brand-orange animate-pulse' : ''}`} />
+                </button>
+                {renderSearchSuggestions()}
+              </div>
+            </div>
+
+            {/* Search Toggle for Mobile */}
+            <button 
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              className="md:hidden flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer"
+            >
+              <Search className="w-5 h-5 stroke-[1.5]" />
+              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500">Search</span>
+            </button>
+
+            
+
+            {/* Profile */}
+            <Link 
+              href={user ? "/profile" : "/login"}
+              className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group text-center"
+            >
+              {headerAvatar ? (
+                <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-200 group-hover:scale-105 transition-transform flex items-center justify-center bg-slate-100 flex-shrink-0">
+                  <img 
+                    src={headerAvatar} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+              ) : (
+                <User className="w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform" />
+              )}
+              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">
+                {user ? user.name.split(' ')[0] : 'Profile'}
+              </span>
+            </Link>
+
+            {/* Wishlist */}
+            <button 
+              onClick={() => setIsWishlistOpen(true)}
+              className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group"
+            >
+              <div className="relative">
+                <Heart className={`w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform ${likedProducts.length > 0 ? 'fill-brand-orange text-brand-orange' : ''}`} />
+                {likedProducts.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                    {likedProducts.length}
+                  </span>
+                )}
+              </div>
+              <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500 group-hover:text-slate-800">Wishlist</span>
+            </button>
+
+            {/* Bag */}
+            <button
+              id="header-cart-btn"
+              onClick={() => setIsCartOpen(true)}
+              className={`flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-all cursor-pointer group ${
+                isBagShaking ? 'animate-cart-shake text-brand-orange scale-105' : ''
+              }`}
+            >
+              <div className="relative">
+                <ShoppingBag className={`w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform ${
+                  isBagShaking ? 'text-brand-orange scale-110' : ''
+                }`} />
+                {cart.length > 0 && (
+                  <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center transition-all ${
+                    isBagShaking ? 'animate-bounce ring-2 ring-orange-300' : ''
+                  }`}>
+                    {cart.reduce((sum, i) => sum + i.quantity, 0)}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${
+                isBagShaking ? 'text-brand-orange font-black' : 'text-slate-500'
+              }`}>Bag</span>
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Search Row (Toggled) */}
+        {isMobileSearchOpen && (
+          <div className="w-full md:hidden px-2 pt-2 pb-1 bg-white border-t border-slate-100" ref={mobileSearchRef}>
+            <div className="relative w-full">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search kicks..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchSuggestions(e.target.value.length > 0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearchSubmit(searchQuery);
+                  }
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-10 py-1.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-all"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={startVoiceSearch}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-brand-orange transition-colors cursor-pointer"
+                title="Search by voice"
+              >
+                <Mic className={`w-4 h-4 ${isVoiceModalOpen ? 'text-brand-orange animate-pulse' : ''}`} />
+              </button>
+              {renderSearchSuggestions()}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Page Content */}
@@ -838,7 +767,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </h4>
             <div className="flex flex-col gap-2.5 font-medium pl-3 text-xs">
               {apiItems && apiItems.length > 0 ? (
-                apiItems.slice(0, 5).map((item) => (
+                apiItems
+                  .filter((item) => item.is_show_footer == null || item.is_show_footer == 1 || item.is_show_footer === true)
+                  .map((item) => (
                   <Link
                     key={item.id}
                     href={`/shop?item=${item.slug || encodeURIComponent((item.name || '').toLowerCase())}`}
@@ -888,11 +819,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   </Link>
                 ))
               )}
-              <Link href="/track-order" className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
-                Track Your Order
-              </Link>
               <Link href="/contact" className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
                 Contact Us
+              </Link>
+              <Link href="/track-order" className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer">
+                Track Your Order
               </Link>
               <button
                 type="button"
@@ -978,19 +909,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         </div>
 
         {/* Bottom Copyright & Legal Links Bar */}
-        <div className="border-t border-slate-900 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="border-t border-slate-900 mt-12 pt-6 text-center text-xs text-slate-500">
           <p>© {new Date().getFullYear()} {systemConfig?.title || 'SLOOR'}. All rights reserved.</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
-            {apiPages && apiPages.length > 0 && apiPages.map((p) => (
-              <Link
-                key={`bottom-${p.id}`}
-                href={`/pages/${p.slug}`}
-                className="hover:text-brand-orange transition-colors"
-              >
-                {p.title}
-              </Link>
-            ))}
-          </div>
         </div>
       </footer>
 
@@ -1586,6 +1506,18 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             {/* Menu Items Accordion */}
             <div className="flex flex-col gap-2.5 mt-2">
               <Link
+                href="/shop"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
+                  pathname === '/shop'
+                    ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                }`}
+              >
+                <ShoppingBag className="h-5 w-5" />
+                Shop
+              </Link>
+              <Link
                 href="/track-order"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
@@ -1596,6 +1528,18 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               >
                 <PackageSearch className="h-5 w-5" />
                 Track Order
+              </Link>
+              <Link
+                href="/reviews"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
+                  pathname === '/reviews'
+                    ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                }`}
+              >
+                <Star className="h-5 w-5" />
+                Reviews
               </Link>
               {apiItems
                 .filter((item) => item.is_show_header == 1 || item.is_show_header === true)

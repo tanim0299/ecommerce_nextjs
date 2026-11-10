@@ -1,5 +1,6 @@
 'use client';
 import { trackMetaEvent } from './utils/pixel';
+import { syncCart } from './utils/cartSync';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ShoppingBag } from 'lucide-react';
 
@@ -289,6 +290,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('cart');
     }
   }, [cart]);
+
+  // Mirror the cart to the server (debounced) for abandoned-cart reminder emails
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      syncCart(
+        cart,
+        { email: user?.email, phone: user?.phone, name: user?.name },
+        token
+      );
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [cart, user, token]);
 
   // Persist wishlist
   useEffect(() => {

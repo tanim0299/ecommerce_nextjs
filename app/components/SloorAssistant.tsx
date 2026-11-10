@@ -274,7 +274,7 @@ export default function SloorAssistant() {
   return (
     <>
       {/* Floating Launcher Button */}
-      <div className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2.5">
+      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2.5">
         {/* Toggle Button */}
         <button
           id="sloor-ai-launcher"
@@ -316,7 +316,7 @@ export default function SloorAssistant() {
 
       {/* Modern AI Chat Window */}
       {isOpen && (
-        <div className="fixed inset-x-3 bottom-20 sm:inset-auto sm:right-6 sm:bottom-24 z-50 sm:w-[420px] h-[82vh] max-h-[640px] bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-slate-200/90 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed inset-x-3 bottom-[84px] sm:inset-auto sm:right-6 sm:bottom-24 z-50 sm:w-[420px] h-[82vh] max-h-[640px] bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-slate-200/90 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
           {/* Header */}
           <div
             style={{ background: headerBg }}
