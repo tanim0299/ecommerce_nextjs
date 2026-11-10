@@ -60,38 +60,55 @@ export default function GoogleTagManager() {
       }
     }
 
-    // 3. Inject Custom Head Scripts if provided (prevent injecting redundant GTM scripts if GTM is disabled)
-    if (marketing?.custom_head_scripts && typeof window !== 'undefined') {
-      const existingHeadCustom = document.getElementById('custom-head-scripts');
-      if (!existingHeadCustom) {
-        let customHead = marketing.custom_head_scripts;
-        if (!isGtmEnabled && customHead.includes('googletagmanager.com/gtm.js')) {
-          customHead = customHead.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*googletagmanager\.com\/gtm\.js[^<]*<\/script>/gi, '');
+    // 3 & 4. Inject custom head/body code. Scripts are re-created so they actually execute
+    // (scripts added via innerHTML never run), and each node goes directly into <head> / <body>.
+    const stripGtm = (html: string, pattern: RegExp, needle: string) =>
+      !isGtmEnabled && html.includes(needle) ? html.replace(pattern, '') : html;
+
+    const injectCustomHtml = (html: string, target: HTMLElement, marker: string) => {
+      if (document.querySelector(`[data-custom-injected="${marker}"]`)) return;
+      const template = document.createElement('template');
+      template.innerHTML = html;
+      Array.from(template.content.childNodes).forEach((node) => {
+        let el: Node = node;
+        if (node.nodeName === 'SCRIPT') {
+          const old = node as HTMLScriptElement;
+          const script = document.createElement('script');
+          Array.from(old.attributes).forEach((attr) => script.setAttribute(attr.name, attr.value));
+          script.text = old.text;
+          el = script;
+        } else if (node.nodeType === Node.TEXT_NODE && !node.textContent?.trim()) {
+          return;
         }
-        if (customHead.trim()) {
-          const div = document.createElement('div');
-          div.id = 'custom-head-scripts';
-          div.innerHTML = customHead;
-          document.head.appendChild(div);
-        }
+        if (el instanceof Element) el.setAttribute('data-custom-injected', marker);
+        else return; // ignore stray text / comments
+        target.appendChild(el);
+      });
+      // marker guard so an empty/whitespace-only payload is not re-processed
+      if (!document.querySelector(`[data-custom-injected="${marker}"]`)) {
+        const guard = document.createElement('meta');
+        guard.setAttribute('data-custom-injected', marker);
+        guard.setAttribute('name', `custom-${marker}-guard`);
+        document.head.appendChild(guard);
       }
+    };
+
+    if (marketing?.custom_head_scripts) {
+      const customHead = stripGtm(
+        marketing.custom_head_scripts,
+        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*googletagmanager\.com\/gtm\.js[^<]*<\/script>/gi,
+        'googletagmanager.com/gtm.js'
+      );
+      if (customHead.trim()) injectCustomHtml(customHead, document.head, 'head');
     }
 
-    // 4. Inject Custom Body Scripts if provided
-    if (marketing?.custom_body_scripts && typeof window !== 'undefined' && document.body) {
-      const existingBodyCustom = document.getElementById('custom-body-scripts');
-      if (!existingBodyCustom) {
-        let customBody = marketing.custom_body_scripts;
-        if (!isGtmEnabled && customBody.includes('googletagmanager.com/ns.html')) {
-          customBody = customBody.replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*googletagmanager\.com\/ns\.html[^<]*<\/noscript>/gi, '');
-        }
-        if (customBody.trim()) {
-          const div = document.createElement('div');
-          div.id = 'custom-body-scripts';
-          div.innerHTML = customBody;
-          document.head.appendChild(div);
-        }
-      }
+    if (marketing?.custom_body_scripts && document.body) {
+      const customBody = stripGtm(
+        marketing.custom_body_scripts,
+        /<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*googletagmanager\.com\/ns\.html[^<]*<\/noscript>/gi,
+        'googletagmanager.com/ns.html'
+      );
+      if (customBody.trim()) injectCustomHtml(customBody, document.body, 'body');
     }
   }, [systemConfig]);
 

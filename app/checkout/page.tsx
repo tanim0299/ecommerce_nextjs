@@ -610,6 +610,8 @@ export default function CheckoutPage() {
         payment_method: paymentMethod,
         coupon_code: appliedCoupon ? appliedCoupon.code : null,
         cart_token: getCartToken(),
+        fbp: document.cookie.match(/(?:^|;\s*)_fbp=([^;]+)/)?.[1] || null,
+        fbc: document.cookie.match(/(?:^|;\s*)_fbc=([^;]+)/)?.[1] || null,
         items: itemsPayload
       };
 

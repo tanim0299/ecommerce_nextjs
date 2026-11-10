@@ -1,21 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  Sparkles,
-  Truck,
-  RefreshCw,
-  ShieldCheck,
-  Award,
-  Heart,
-  Headphones,
-  Zap,
-  CheckCircle,
-  Package,
-  Clock,
-  CreditCard,
-  Flame,
-} from 'lucide-react';
 import { useApp } from '../context';
 
 export interface WhyChooseUsItem {
@@ -27,39 +12,65 @@ export interface WhyChooseUsItem {
   sl_no?: number;
 }
 
+const STAR_COLORS = [
+  '#d9653b', // 01: Terracotta / Coral Orange (matches screenshot)
+  '#d49b35', // 02: Warm Golden Mustard (matches screenshot)
+  '#6e947c', // 03: Muted Sage Green (matches screenshot)
+  '#537895', // 04: Slate Denim Blue
+];
+
 const DEFAULT_FALLBACK_PERKS: WhyChooseUsItem[] = [
   {
     id: 1,
     title: '100% Premium Grade Kicks',
-    sub_title: 'Finest materials, exact silhouette & premium craft finish',
-    icon: 'sparkles',
+    sub_title: 'Finest tumbled calfskin, exact silhouette & artisan stitch craft for street elegance.',
+    image: '/why-choose-us/perk1.jpg',
     sl_no: 1,
   },
   {
     id: 2,
     title: 'Double-Boxed Safe Delivery',
-    sub_title: 'Shoe box damage protection with nationwide Cash on Delivery',
-    icon: 'package',
+    sub_title: 'Shoe box damage protection with nationwide cash on delivery right to your doorstep.',
+    image: '/why-choose-us/perk2.jpg',
     sl_no: 2,
   },
   {
     id: 3,
-    title: '7-Day Size Exchange',
-    sub_title: 'Size not fitting? Instant hassle-free replacement support',
-    icon: 'refresh-cw',
-    sl_no: 3,
-  },
-  {
-    id: 4,
     title: 'All-Day Cushioning & Grip',
-    sub_title: 'Ergonomic insole designed for ultimate comfort & anti-slip traction',
-    icon: 'shield-check',
-    sl_no: 4,
+    sub_title: 'Ergonomic footbed designed for supreme comfort, arch support & anti-slip traction.',
+    image: '/why-choose-us/perk3.jpg',
+    sl_no: 3,
   },
 ];
 
+function StarBadge({ number, color }: { number: string; color: string }) {
+  return (
+    <div className="relative w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center filter drop-shadow-md">
+      <svg viewBox="0 0 100 100" className="w-full h-full" style={{ color }}>
+        <polygon
+          points="50,4 63,38 98,38 70,60 80,94 50,73 20,94 30,60 2,38 37,38"
+          fill="currentColor"
+        />
+        <text
+          x="50"
+          y="56"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="#ffffff"
+          fontSize="26"
+          fontWeight="800"
+          fontFamily="system-ui, -apple-system, sans-serif"
+          letterSpacing="-0.5px"
+        >
+          {number}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 export default function WhyChooseUs() {
-  const { resolveImageUrl } = useApp();
+  const { resolveImageUrl, systemConfig } = useApp();
   const [items, setItems] = useState<WhyChooseUsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -88,7 +99,7 @@ export default function WhyChooseUs() {
         if (isMounted) setIsLoading(false);
       }
 
-      // Fallback
+      // Fallback data
       if (isMounted) {
         setItems(DEFAULT_FALLBACK_PERKS);
         setIsLoading(false);
@@ -102,121 +113,89 @@ export default function WhyChooseUs() {
     };
   }, []);
 
-  const renderIcon = (iconName?: string | null, customImg?: string | null) => {
-    if (customImg) {
-      return (
-        <img
-          src={resolveImageUrl(customImg)}
-          alt="Perk Badge"
-          className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
-        />
-      );
-    }
-
-    const key = (iconName || 'sparkles').toLowerCase().trim();
-
-    switch (key) {
-      case 'truck':
-      case 'delivery':
-        return <Truck className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'shield-check':
-      case 'shield':
-      case 'security':
-        return <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'refresh-cw':
-      case 'refresh':
-      case 'rotate':
-      case 'exchange':
-        return <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'award':
-      case 'quality':
-      case 'star':
-        return <Award className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'heart':
-        return <Heart className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'headphones':
-      case 'support':
-        return <Headphones className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'zap':
-      case 'lightning':
-        return <Zap className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'check-circle':
-      case 'check':
-        return <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'package':
-      case 'box':
-        return <Package className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'clock':
-        return <Clock className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'credit-card':
-      case 'payment':
-        return <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'flame':
-      case 'hot':
-        return <Flame className="w-5 h-5 sm:w-6 sm:h-6" />;
-      case 'sparkles':
-      default:
-        return <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />;
-    }
-  };
-
   if (!isLoading && items.length === 0) {
     return null;
   }
 
+  // Derive display brand title
+  const rawBrand = systemConfig?.title || 'SLOOR';
+  const brandName = rawBrand.includes('-')
+    ? rawBrand.split('-')[0].trim()
+    : rawBrand.split(' ')[0].trim();
+
   return (
-    <section id="why-choose-us-section" className="w-full my-2 sm:my-4">
-      <div className="bg-gradient-to-b from-slate-50/80 to-white/90 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xs">
-        <div className="text-center max-w-xl mx-auto mb-6 sm:mb-8 flex flex-col items-center gap-1.5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#c07828]/10 text-[#c07828] text-[10px] sm:text-xs font-black uppercase tracking-wider">
-            <Sparkles className="w-3 h-3 text-[#c07828]" />
-            Why Choose Sloor Kicks
-          </span>
-          <h2 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-            Crafted For Streetwear & All-Day Comfort
+    <section id="why-choose-us-section" className="w-full py-12 sm:py-16 bg-white">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Why Choose {brandName}?
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed">
-            Premium grade footwear, true-to-fit comfort, and worry-free double-boxed shipping.
+          <p className="text-sm sm:text-base text-slate-500 font-normal mt-2.5 leading-relaxed">
+            Premium luxury kicks engineered for street style, high durability, and all-day comfort.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+        {/* Circular Cards Grid */}
+        <div
+          className={`grid gap-8 sm:gap-10 lg:gap-12 ${
+            items.length === 2
+              ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto'
+              : items.length === 4
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+              : 'grid-cols-1 md:grid-cols-3'
+          }`}
+        >
           {isLoading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-slate-100 flex items-start gap-3.5 animate-pulse"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-slate-200 shrink-0" />
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="h-4 w-3/4 bg-slate-200 rounded-md" />
-                    <div className="h-3 w-full bg-slate-100 rounded-md" />
-                  </div>
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center text-center animate-pulse">
+                  <div className="w-48 h-48 sm:w-56 sm:h-56 md:w-60 md:h-60 rounded-full bg-slate-200 mb-5" />
+                  <div className="h-5 w-40 bg-slate-200 rounded-md mb-2" />
+                  <div className="h-3 w-56 bg-slate-100 rounded-md" />
                 </div>
               ))
-            : items.map((item) => (
-                <div
-                  key={item.id}
-                  className="group relative p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-slate-100/90 hover:border-[#c07828]/40 hover:shadow-md transition-all duration-300 flex items-start gap-3.5 sm:gap-4 overflow-hidden"
-                >
-                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#c07828] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            : items.map((item, index) => {
+                const stepNumber = String(item.sl_no ?? index + 1).padStart(2, '0');
+                const badgeColor = STAR_COLORS[index % STAR_COLORS.length];
+                const imageSrc = item.image
+                  ? resolveImageUrl(item.image)
+                  : DEFAULT_FALLBACK_PERKS[index % DEFAULT_FALLBACK_PERKS.length]?.image || '/why-choose-us/perk1.jpg';
 
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#c07828]/10 text-[#c07828] group-hover:bg-[#c07828] group-hover:text-white flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 group-hover:scale-105">
-                    {renderIcon(item.icon, item.image)}
-                  </div>
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col items-center text-center group transition-all duration-300"
+                  >
+                    {/* Circle Image with Overlapping Star Badge */}
+                    <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-60 md:h-60 lg:w-64 lg:h-64 mx-auto mb-5">
+                      {/* Top-Left Star Badge */}
+                      <div className="absolute -top-2 -left-2 sm:-top-3 sm:-left-3 z-20 transition-transform duration-300 group-hover:scale-110">
+                        <StarBadge number={stepNumber} color={badgeColor} />
+                      </div>
 
-                  <div className="flex flex-col gap-0.5 sm:gap-1 flex-1 min-w-0">
-                    <h3 className="text-xs sm:text-[13.5px] font-bold text-slate-900 group-hover:text-[#c07828] transition-colors duration-200 line-clamp-1">
+                      {/* Circular Frame */}
+                      <div className="w-full h-full rounded-full overflow-hidden shadow-md ring-4 ring-white border border-slate-200/90 bg-slate-50 transition-all duration-500 group-hover:shadow-xl group-hover:border-[#c07828]/40">
+                        <img
+                          src={imageSrc}
+                          alt={item.title}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-108"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Content below Circle */}
+                    <h3 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900 tracking-tight mb-2 group-hover:text-[#c07828] transition-colors duration-200">
                       {item.title}
                     </h3>
                     {item.sub_title && (
-                      <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed line-clamp-2">
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal max-w-xs sm:max-w-sm">
                         {item.sub_title}
                       </p>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
         </div>
       </div>
     </section>
