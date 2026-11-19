@@ -4,7 +4,7 @@
 const TOKEN_KEY = 'cart_token';
 
 const apiBase = () => {
-  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8088/api';
   return base.endsWith('/') ? base.slice(0, -1) : base;
 };
 
