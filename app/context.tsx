@@ -75,6 +75,27 @@ export interface TrustBadge {
   is_active?: boolean;
 }
 
+export interface AiResearchPlatform {
+  id?: number;
+  key: string;
+  name: string;
+  slug?: string;
+  icon?: string;
+  icon_preset?: string;
+  logo?: string | null;
+  is_active: boolean;
+  url_template?: string;
+  prompt?: string | null;
+  sl?: number;
+}
+
+export interface AiResearchConfig {
+  is_enabled: boolean;
+  title: string;
+  prompt: string;
+  platforms: AiResearchPlatform[];
+}
+
 export interface SystemConfig {
   title: string;
   logo: string;
@@ -95,6 +116,11 @@ export interface SystemConfig {
   gtm_id?: string | null;
   fb_pixel_id?: string | null;
   marketing?: MarketingConfig;
+  ai_research?: AiResearchConfig;
+  ai_research_enabled?: boolean;
+  ai_research_title?: string;
+  ai_research_prompt?: string;
+  ai_research_platforms?: AiResearchPlatform[];
 }
 
 export interface FlyingItem {
@@ -216,6 +242,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   s.icon = resolveImageUrl(s.icon);
                 }
                 return s;
+              });
+            }
+
+            if (data.ai_research && Array.isArray(data.ai_research.platforms)) {
+              data.ai_research.platforms = data.ai_research.platforms.map((p: any) => {
+                if (p.logo) p.logo = resolveImageUrl(p.logo);
+                return p;
+              });
+            }
+
+            if (Array.isArray(data.ai_research_platforms)) {
+              data.ai_research_platforms = data.ai_research_platforms.map((p: any) => {
+                if (p.logo) p.logo = resolveImageUrl(p.logo);
+                return p;
               });
             }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Sparkles,
   X,
@@ -63,7 +63,7 @@ const DEFAULT_SUGGESTIONS = [
 
 export default function SloorAssistant() {
   const router = useRouter();
-  const { resolveImageUrl, handleQuickAddToCart, showToast } = useApp();
+  const { resolveImageUrl, handleQuickAddToCart, showToast, systemConfig } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -264,58 +264,102 @@ export default function SloorAssistant() {
     });
   };
 
-  // If disabled by admin, cleanly hide launcher
-  if (!assistantConfig.isEnabled) {
+  // If both assistant is disabled and no systemConfig, hide
+  if (!assistantConfig.isEnabled && !systemConfig) {
     return null;
   }
 
   const { themeColor, headerBg, launcherText, name, roleTitle } = assistantConfig;
 
+  // WhatsApp connection info
+  const rawPhone = systemConfig?.whatsapp_number || systemConfig?.phones?.[0] || '+8801895238135';
+  const digits = rawPhone.replace(/\D/g, '');
+  const waNumber = digits.startsWith('880') ? digits : (digits.startsWith('0') ? `88${digits}` : digits);
+  const waUrl = `https://wa.me/${waNumber}`;
+
+  const pathname = usePathname();
+  const isProductPage = pathname?.startsWith('/product');
+
   return (
     <>
-      {/* Floating Launcher Button */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2.5">
-        {/* Toggle Button */}
-        <button
-          id="sloor-ai-launcher"
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          style={{
-            borderColor: isOpen ? '#334155' : `${themeColor}80`,
-            boxShadow: isOpen ? '0 10px 25px rgba(0,0,0,0.3)' : `0 10px 25px -5px ${themeColor}40`,
-          }}
-          className={`flex items-center justify-center gap-2.5 rounded-full p-3.5 sm:px-5 sm:py-3.5 transition-all duration-300 cursor-pointer border active:scale-95 ${
-            isOpen
-              ? 'bg-slate-950 text-white hover:bg-black'
-              : 'bg-slate-950 hover:bg-black text-white'
-          }`}
-          aria-label={isOpen ? `Close ${name}` : `Open ${name}`}
-        >
-          {isOpen ? (
-            <ChevronDown className="w-6 h-6 text-slate-200 transition-transform duration-300" />
-          ) : (
-            <>
-              <div className="relative flex items-center justify-center">
-                <Sparkles className="w-5 h-5 animate-pulse" style={{ color: themeColor }} />
-                <span
-                  className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ring-2 ring-slate-950 animate-ping"
-                  style={{ backgroundColor: themeColor }}
-                />
-                <span
-                  className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ring-2 ring-slate-950"
-                  style={{ backgroundColor: themeColor }}
-                />
-              </div>
-              <span className="hidden sm:inline font-bold text-xs tracking-wide uppercase">
-                {name}
-              </span>
-            </>
-          )}
-        </button>
+      {/* Floating Action Buttons */}
+      <div className={`fixed right-4 sm:right-6 z-40 flex flex-col items-end gap-3 pointer-events-none transition-all duration-300 ${isProductPage ? 'bottom-20 sm:bottom-20' : 'bottom-20 sm:bottom-6'}`}>
+        {/* Floating WhatsApp Action Button (Above AI Assistant) */}
+        {!isOpen && (
+          <a
+            id="sloor-whatsapp-float"
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat on WhatsApp"
+            className="pointer-events-auto relative flex items-center justify-center w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-[0_8px_25px_rgba(37,211,102,0.45)] hover:shadow-[0_12px_32px_rgba(37,211,102,0.65)] hover:scale-110 active:scale-95 transition-all duration-300 group cursor-pointer"
+            title="Chat on WhatsApp"
+          >
+            {/* Animated online badge */}
+            <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-400 border-2 border-white" />
+            </span>
+
+            {/* Hover Tooltip on desktop */}
+            <span className="hidden sm:group-hover:flex absolute right-full mr-3 top-1/2 -translate-y-1/2 whitespace-nowrap bg-slate-950 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-xl items-center gap-1.5 pointer-events-none transition-all duration-200 border border-slate-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
+              <span>Chat on WhatsApp</span>
+            </span>
+
+            {/* WhatsApp SVG Icon */}
+            <svg
+              className="w-6 h-6 sm:w-7 sm:h-7 fill-white group-hover:scale-105 transition-transform duration-200"
+              viewBox="0 0 24 24"
+            >
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.652c1.746.953 3.71 1.455 5.711 1.456h.004c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 00-3.49-8.414Z" />
+            </svg>
+          </a>
+        )}
+
+        {/* Toggle Button for AI Assistant */}
+        {assistantConfig.isEnabled && (
+          <button
+            id="sloor-ai-launcher"
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            style={{
+              borderColor: isOpen ? '#334155' : `${themeColor}80`,
+              boxShadow: isOpen ? '0 10px 25px rgba(0,0,0,0.3)' : `0 10px 25px -5px ${themeColor}40`,
+            }}
+            className={`pointer-events-auto flex items-center justify-center gap-2.5 rounded-full p-3.5 sm:px-5 sm:py-3.5 transition-all duration-300 cursor-pointer border active:scale-95 ${
+              isOpen
+                ? 'bg-slate-950 text-white hover:bg-black'
+                : 'bg-slate-950 hover:bg-black text-white'
+            }`}
+            aria-label={isOpen ? `Close ${name}` : `Open ${name}`}
+          >
+            {isOpen ? (
+              <ChevronDown className="w-6 h-6 text-slate-200 transition-transform duration-300" />
+            ) : (
+              <>
+                <div className="relative flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 animate-pulse" style={{ color: themeColor }} />
+                  <span
+                    className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ring-2 ring-slate-950 animate-ping"
+                    style={{ backgroundColor: themeColor }}
+                  />
+                  <span
+                    className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ring-2 ring-slate-950"
+                    style={{ backgroundColor: themeColor }}
+                  />
+                </div>
+                <span className="hidden sm:inline font-bold text-xs tracking-wide uppercase">
+                  {name}
+                </span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Modern AI Chat Window */}
-      {isOpen && (
+      {assistantConfig.isEnabled && isOpen && (
         <div className="fixed inset-x-3 bottom-[84px] sm:inset-auto sm:right-6 sm:bottom-24 z-50 sm:w-[420px] h-[82vh] max-h-[640px] bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-slate-200/90 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
           {/* Header */}
           <div

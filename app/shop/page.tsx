@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useApp, getProductUrl } from '../context';
 import { isProductMatch, getSearchRelevanceScore } from '../utils/searchRelevance';
+import { fetchWithCache } from '../utils/apiCache';
+import { updateHeadMeta } from '../utils/seoHelper';
 import ProductQuickView from '../components/ProductQuickView';
 
 type PriceValue = number | string | null;
@@ -149,6 +151,7 @@ function ShopCatalogContent() {
   const [quickViewProductId, setQuickViewProductId] = useState<number | null>(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(16);
+  const [hoveredProductIds, setHoveredProductIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -160,23 +163,15 @@ function ShopCatalogContent() {
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const [itemsResponse, categoriesResponse, productsResponse] = await Promise.all([
-          fetch(`${cleanUrl}/items`, { signal: controller.signal }),
-          fetch(`${cleanUrl}/categories`, { signal: controller.signal }),
-          fetch(`${cleanUrl}/products`, { signal: controller.signal }),
-        ]);
 
-        if (!itemsResponse.ok || !categoriesResponse.ok || !productsResponse.ok) {
-          throw new Error('Unable to load the shop catalog.');
-        }
-
+        // Fetch using in-memory cache and request deduplication (0ms on navigation!)
         const [itemsJson, categoriesJson, productsJson] = await Promise.all([
-          itemsResponse.json(),
-          categoriesResponse.json(),
-          productsResponse.json(),
+          fetchWithCache(`${cleanUrl}/items`, { signal: controller.signal }),
+          fetchWithCache(`${cleanUrl}/categories`, { signal: controller.signal }),
+          fetchWithCache(`${cleanUrl}/products`, { signal: controller.signal }),
         ]);
 
-        if (!Array.isArray(itemsJson.data) || !Array.isArray(categoriesJson.data) || !Array.isArray(productsJson.data)) {
+        if (!Array.isArray(itemsJson?.data) || !Array.isArray(categoriesJson?.data) || !Array.isArray(productsJson?.data)) {
           throw new Error('Invalid catalog response.');
         }
 
@@ -216,13 +211,12 @@ function ShopCatalogContent() {
 
         let itemDetail: Item | null = resolvedItem;
         if (resolvedItem) {
-          const itemResponse = await fetch(`${cleanUrl}/items/${resolvedItem.id}`, {
+          const itemJson = await fetchWithCache(`${cleanUrl}/items/${resolvedItem.id}`, {
             signal: controller.signal,
           });
-          if (!itemResponse.ok) throw new Error('Item not found.');
-          const itemJson = await itemResponse.json();
-          if (itemJson.status !== 'success' || !itemJson.data) throw new Error('Item not found.');
-          itemDetail = itemJson.data as Item;
+          if (itemJson?.status === 'success' && itemJson.data) {
+            itemDetail = itemJson.data as Item;
+          }
         }
 
         const itemCategories = resolvedItem
@@ -350,6 +344,34 @@ function ShopCatalogContent() {
       document.body.style.overflow = '';
     };
   }, [isMobileFilterOpen]);
+
+  // Update Category & Search SEO Metadata
+  useEffect(() => {
+    if (selectedCategory) {
+      const catTitle = (selectedCategory as any).meta_title || `${selectedCategory.name} Shoes & Sneakers | SLOOR BD`;
+      const catDesc = (selectedCategory as any).meta_description || `Explore authentic ${selectedCategory.name} sneakers and footwear at SLOOR BD. Fast Cash on Delivery in Bangladesh.`;
+      const catCanonical = (selectedCategory as any).canonical_url || `https://sloor.bd/shop?category=${encodeURIComponent(selectedCategory.slug || selectedCategory.name.toLowerCase())}`;
+      updateHeadMeta({
+        title: catTitle,
+        description: catDesc,
+        canonical: catCanonical,
+        isIndexable: true,
+      });
+    } else if (searchQueryParam) {
+      updateHeadMeta({
+        title: `Search: "${searchQueryParam}" | SLOOR BD`,
+        description: `Browse matching sneakers and shoes for "${searchQueryParam}" at SLOOR BD.`,
+        isIndexable: false,
+      });
+    } else {
+      updateHeadMeta({
+        title: 'Shop Sneakers & Footwear Collections | SLOOR BD',
+        description: 'Browse the complete collection of authentic sneakers, running shoes, and luxury lifestyle footwear at SLOOR BD.',
+        canonical: 'https://sloor.bd/shop',
+        isIndexable: true,
+      });
+    }
+  }, [selectedCategory, searchQueryParam]);
 
   // Reset pagination when any filter or sort changes
   useEffect(() => {
@@ -834,6 +856,11 @@ function ShopCatalogContent() {
                   return (
                     <article
                       key={product.id}
+                      onMouseEnter={() => {
+                        if (hoverImage && !hoveredProductIds.has(product.id)) {
+                          setHoveredProductIds(prev => new Set(prev).add(product.id));
+                        }
+                      }}
                       className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs transition-all duration-500 hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-xl"
                     >
                       <button
@@ -878,7 +905,7 @@ function ShopCatalogContent() {
                               className={`h-full w-full object-contain p-2 transition-all duration-500 group-hover:scale-[1.03] ${hoverImage ? 'group-hover:opacity-0' : ''} ${product.stock_status === 'out_of_stock' ? 'opacity-50' : ''}`}
                             />
                           )}
-                          {hoverImage && (
+                          {hoverImage && hoveredProductIds.has(product.id) && (
                             <img
                               src={resolveImageUrl(hoverImage)}
                               alt={product.name ? `${product.name} alternate view` : 'Alternate product view'}
