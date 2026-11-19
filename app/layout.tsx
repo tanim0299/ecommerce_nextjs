@@ -32,13 +32,96 @@ const montserrat = Montserrat({
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: {
-    default: "SLOOR | Premium Apparel & Lifestyle",
-    template: "%s | SLOOR",
-  },
-  description: "Premium clothing e-commerce retail store. Experience the finest combed cotton fabrics, refined tailoring, and modern designs for your everyday lifestyle.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://admin.sloor.bd/api/';
+  const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+
+  let googleVerification: string | undefined;
+  const otherVerification: Record<string, string | string[]> = {};
+  let siteTitle = "SLOOR | Premium Apparel & Lifestyle";
+  const siteDescription =
+    "Premium clothing e-commerce retail store. Experience the finest combed cotton fabrics, refined tailoring, and modern designs for your everyday lifestyle.";
+
+  try {
+    const res = await fetch(`${cleanUrl}/system-config`, { cache: 'force-cache' });
+    if (res.ok) {
+      const json = await res.json();
+      const cfg = json.data;
+      if (cfg?.title) siteTitle = `${cfg.title}`;
+
+      const marketing = cfg?.marketing;
+      const headScripts: string = marketing?.custom_head_scripts || '';
+
+      // Match <meta name="..." content="..." />
+      const metaRegex = /<meta\s+[^>]*name=["']([^"']+)["'][^>]*content=["']([^"']+)["'][^>]*>/gi;
+      let match;
+      while ((match = metaRegex.exec(headScripts)) !== null) {
+        const name = match[1];
+        const content = match[2];
+        if (name === 'google-site-verification') {
+          googleVerification = content;
+        } else {
+          otherVerification[name] = content;
+        }
+      }
+
+      // Match <meta content="..." name="..." />
+      const revRegex = /<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']([^"']+)["'][^>]*>/gi;
+      while ((match = revRegex.exec(headScripts)) !== null) {
+        const content = match[1];
+        const name = match[2];
+        if (name === 'google-site-verification') {
+          googleVerification = content;
+        } else {
+          otherVerification[name] = content;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('generateMetadata error:', err);
+  }
+
+  // Fallbacks ensuring verification is never missed
+  if (!googleVerification) {
+    googleVerification = 'aVyMjncS6n0kqIkOeIHNe84BK7P2up5MLWBXtm9ffOI';
+  }
+  if (!otherVerification['facebook-domain-verification']) {
+    otherVerification['facebook-domain-verification'] = 'f8hhxcxjlusayza5jru1a9tyjebnu6';
+  }
+
+  return {
+    title: {
+      default: siteTitle,
+      template: "%s | SLOOR",
+    },
+    description: siteDescription,
+    robots: {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: {
+        index: false,
+        follow: false,
+        noimageindex: true,
+        "max-video-preview": -1,
+        "max-image-preview": "none",
+        "max-snippet": -1,
+      },
+    },
+    icons: {
+      icon: [
+        { url: '/favicon.ico', sizes: 'any' },
+        { url: '/favicon.png', type: 'image/png' },
+      ],
+      shortcut: '/favicon.ico',
+      apple: '/favicon.png',
+    },
+    verification: {
+      google: googleVerification,
+      other: otherVerification,
+    },
+  };
+}
 
 export default function RootLayout({
   children,

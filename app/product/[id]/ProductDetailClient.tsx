@@ -29,10 +29,10 @@ import {
 import { useApp, getProductUrl } from '../../context';
 import FacebookEmbedPlayer from '../../components/FacebookEmbedPlayer';
 import SafeHtml from '../../components/SafeHtml';
-import ProductReviews from '../../components/ProductReviews';
 import CustomerReviewsShowcase from '../../components/CustomerReviewsShowcase';
 import ProductComments from '../../components/ProductComments';
 import ProductQuickView from '../../components/ProductQuickView';
+import { updateHeadMeta } from '../../utils/seoHelper';
 
 type PriceValue = number | string | null;
 
@@ -256,7 +256,7 @@ export default function ProductDetailClient() {
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<number, number>>({});
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews' | 'comments'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'comments'>('description');
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [commentCount, setCommentCount] = useState<number>(0);
   const [isCopiedSku, setIsCopiedSku] = useState(false);
@@ -364,7 +364,7 @@ export default function ProductDetailClient() {
         } else if (specList.length > 0) {
           setActiveTab('specifications');
         } else {
-          setActiveTab('reviews');
+          setActiveTab('comments');
         }
 
         setProduct(normalizedProduct);
@@ -399,6 +399,24 @@ export default function ProductDetailClient() {
             window.history.replaceState(null, '', canonicalPath);
           }
         }
+
+        // Update document title, meta description, canonical URL, and OG tags
+        const seoData = (data as any).seo || {};
+        const siteTitle = systemConfig?.title || 'SLOOR BD';
+        const pageTitle = seoData.title || `${data.name} | ${siteTitle}`;
+        const cleanDesc = data.description ? data.description.replace(/<[^>]*>?/gm, '').trim().slice(0, 160) : '';
+        const pageDesc = seoData.description || (cleanDesc ? `${cleanDesc}...` : `Buy authentic ${data.name} at SLOOR BD. Fast Cash on Delivery all over Bangladesh, 7-day easy exchange.`);
+        const canonicalUrl = seoData.canonical || `https://sloor.bd/product/${encodeURIComponent(data.slug || data.id)}`;
+        const ogImg = firstImage ? resolveImageUrl(firstImage) : undefined;
+
+        updateHeadMeta({
+          title: pageTitle,
+          description: pageDesc,
+          canonical: canonicalUrl,
+          ogImage: ogImg,
+          ogType: 'product',
+          isIndexable: true,
+        });
 
         setSelectedImage(firstImage);
 
@@ -620,17 +638,16 @@ export default function ProductDetailClient() {
   ), [product?.specification]);
 
   const availableTabs = useMemo(() => {
-    const list: Array<{ id: 'description' | 'specifications' | 'reviews' | 'comments'; label: string; count?: number }> = [];
+    const list: Array<{ id: 'description' | 'specifications' | 'comments'; label: string; count?: number }> = [];
     if (product?.description) {
       list.push({ id: 'description', label: 'Description' });
     }
     if (specifications.length > 0) {
       list.push({ id: 'specifications', label: 'Specifications', count: specifications.length });
     }
-    list.push({ id: 'reviews', label: 'Reviews', count: reviewCount });
     list.push({ id: 'comments', label: 'Comments', count: commentCount });
     return list;
-  }, [product?.description, specifications.length, reviewCount, commentCount]);
+  }, [product?.description, specifications.length, commentCount]);
 
   const currentTab = useMemo(() => {
     if (availableTabs.some(tab => tab.id === activeTab)) {
@@ -1242,12 +1259,7 @@ export default function ProductDetailClient() {
           </div>
         </div>
 
-        {/* Tagged customer reviews, shown before the description */}
-        <div className="mt-6">
-          <CustomerReviewsShowcase productId={product.id} />
-        </div>
-
-        {/* Segmented Tabs Section (Description, Specs, Reviews, Comments) */}
+        {/* Segmented Tabs Section (Description, Specs, Comments) */}
         <div className="mt-6 border-t border-slate-200/70 pt-5">
           <div className="flex items-center gap-2 border-b border-slate-200/70 pb-3 overflow-x-auto scrollbar-none">
             {availableTabs.map((tab) => (
@@ -1274,7 +1286,7 @@ export default function ProductDetailClient() {
           </div>
 
           {/* Tab Body */}
-          <div className="py-5 text-sm sm:text-base leading-relaxed text-slate-700 min-h-[160px]">
+          <div className="py-5 text-sm sm:text-base leading-relaxed text-slate-700 min-h-[140px]">
             {currentTab === 'description' && product.description && (
               <div className="max-w-4xl bg-white py-2">
                 <SafeHtml html={product.description} className="product-rich-text prose prose-slate max-w-none text-sm sm:text-base leading-relaxed" />
@@ -1300,12 +1312,6 @@ export default function ProductDetailClient() {
                 </dl>
               </div>
             )}
-            {currentTab === 'reviews' && (
-              <ProductReviews
-                productId={product.id}
-                onReviewStatsUpdate={(count) => setReviewCount(count)}
-              />
-            )}
             {currentTab === 'comments' && (
               <ProductComments
                 productId={product.id}
@@ -1313,6 +1319,11 @@ export default function ProductDetailClient() {
               />
             )}
           </div>
+        </div>
+
+        {/* Customer Reviews Sliding Section (Below Description Tabs) */}
+        <div className="mt-4 border-t border-slate-200/70 pt-4">
+          <CustomerReviewsShowcase productId={product.id} />
         </div>
 
         {/* Recommended / Related Products Section */}
@@ -1394,38 +1405,86 @@ export default function ProductDetailClient() {
           </div>
         )}
 
-        {/* Sticky Bottom Purchase Bar (On Scroll) */}
+        {/* Sticky Bottom Purchase Bar (On Scroll - Mobile & Desktop) */}
         <div
-          className={`lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 sm:px-4 py-2 sm:py-2.5 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] transition-all duration-300 transform ${
+          className={`fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-3 sm:px-6 py-2.5 sm:py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 transform ${
             showStickyBar ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
           }`}
         >
-          <div className="max-w-5xl mx-auto w-full flex items-center justify-between gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 sm:flex-initial">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+          <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-3 sm:gap-6">
+            {/* Product Summary */}
+            <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 sm:flex-initial">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-2xs">
                 {currentImage && (
                   <img
                     src={resolveImageUrl(currentImage)}
                     alt={product.name || ''}
-                    className="w-full h-full object-contain p-0.5"
+                    className="w-full h-full object-cover"
                   />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[100px] xs:max-w-[150px] sm:max-w-md">{product.name}</h4>
-                <p className="text-[11px] sm:text-xs font-extrabold text-brand-orange">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] xs:max-w-[170px] sm:max-w-xs md:max-w-md">
+                    {product.name}
+                  </h4>
+                  {selectedVariant?.name && (
+                    <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-700 shrink-0">
+                      Size: {selectedVariant.name}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs sm:text-sm font-black text-brand-orange">
                   BDT {displayedPrice ? formatPrice(displayedPrice) : ''}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Purchase Controls & Buttons */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Quantity Selector (Desktop/Tablet) */}
+              <div className="hidden sm:flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50/70 h-10 shadow-2xs">
+                <button
+                  type="button"
+                  disabled={quantity <= 1 || isOutOfStock}
+                  onClick={() => {
+                    if (selectedCartItem) {
+                      handleUpdateCartQty(selectedCartItem.id, Math.max(1, selectedCartItem.quantity - 1));
+                    } else {
+                      setQuantity((prev) => Math.max(1, prev - 1));
+                    }
+                  }}
+                  aria-label="Decrease quantity"
+                  className="px-2.5 h-full text-slate-600 hover:bg-slate-200/70 transition-colors disabled:opacity-40 cursor-pointer"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <span className="w-8 text-center text-xs font-bold text-slate-900 select-none">
+                  {selectedCartItem ? selectedCartItem.quantity : quantity}
+                </span>
+                <button
+                  type="button"
+                  disabled={isOutOfStock}
+                  onClick={() => {
+                    if (selectedCartItem) {
+                      handleUpdateCartQty(selectedCartItem.id, selectedCartItem.quantity + 1);
+                    } else {
+                      setQuantity((prev) => prev + 1);
+                    }
+                  }}
+                  aria-label="Increase quantity"
+                  className="px-2.5 h-full text-slate-600 hover:bg-slate-200/70 transition-colors disabled:opacity-40 cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
               {/* Add to Bag Button */}
               <button
                 type="button"
                 onClick={handleAdd}
                 disabled={Boolean(selectedCartItem) || displayedPrice === null || isOutOfStock}
-                className={`h-10 sm:h-11 px-3 sm:px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 ${
+                className={`h-10 sm:h-11 px-3.5 sm:px-5 rounded-xl text-xs sm:text-xs font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 ${
                   selectedCartItem
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-none cursor-default'
                     : displayedPrice === null || isOutOfStock
@@ -1444,7 +1503,7 @@ export default function ProductDetailClient() {
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  className="h-10 sm:h-11 px-3.5 sm:px-5 rounded-xl bg-slate-950 hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                  className="h-10 sm:h-11 px-4 sm:px-6 rounded-xl bg-slate-950 hover:bg-black text-white text-xs sm:text-xs font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                 >
                   <Zap className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
                   <span className="whitespace-nowrap">Buy Now</span>

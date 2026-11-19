@@ -29,10 +29,14 @@ import {
   Menu,
   ChevronRight,
   ChevronDown,
-  Mic
+  Mic,
+  Sparkles,
+  Home
 } from 'lucide-react';
 import { useApp, getProductUrl } from './context';
 import { isProductMatch, filterAndSortByRelevance } from './utils/searchRelevance';
+import { fetchWithCache } from './utils/apiCache';
+import { updateHeadMeta } from './utils/seoHelper';
 
 type WishlistPrice = number | string | null;
 
@@ -108,6 +112,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const [apiPages, setApiPages] = React.useState<any[]>([]);
   const [apiProducts, setApiProducts] = React.useState<WishlistProduct[]>([]);
   const [isWishlistProductsLoading, setIsWishlistProductsLoading] = React.useState(true);
+  const [isFooterDataLoading, setIsFooterDataLoading] = React.useState(true);
+  const [seoSettings, setSeoSettings] = React.useState<any>(null);
 
   const desktopSearchRef = React.useRef<HTMLDivElement>(null);
   const mobileSearchRef = React.useRef<HTMLDivElement>(null);
@@ -130,6 +136,92 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   const startVoiceSearch = () => {
     setIsVoiceModalOpen(true);
+  };
+
+  const [aiToastMessage, setAiToastMessage] = React.useState<string | null>(null);
+
+  const renderAiIcon = (plat: any) => {
+    if (plat.logo) {
+      const logoUrl = resolveImageUrl(plat.logo);
+      return (
+        <img
+          src={logoUrl}
+          alt={plat.name}
+          className="w-3.5 h-3.5 object-contain shrink-0 rounded-sm"
+          onError={(e) => {
+            (e.target as HTMLElement).style.display = 'none';
+          }}
+        />
+      );
+    }
+
+    const key = (plat.icon_preset || plat.key || plat.slug || '').toLowerCase();
+    switch (key) {
+      case 'chatgpt':
+        return (
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.5045 4.5045 0 0 1-4.4945 4.4947zm-9.66-4.2254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1401-1.7464zM2.3417 8.571a4.466 4.466 0 0 1 2.3666-1.9728V12.2a.7665.7665 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3417 8.571zm15.9185 4.221-5.8428-3.3732 2.0201-1.1683a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.4021-.6768zm2.0107-3.0231-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L8.7272 10.2704V7.938a.0757.0757 0 0 1 .0332-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6702 4.6644zM12.9818 11.2372l-2.4776-1.4284 2.4776-1.4284 2.4776 1.4284z"/>
+          </svg>
+        );
+      case 'perplexity':
+        return (
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.972 5.568v-.004l-7.065-4.417a1.82 1.82 0 0 0-1.814 0L4.028 5.564v.004C3.393 5.96 3 6.648 3 7.42v9.16c0 .773.393 1.46 1.028 1.856l7.065 4.417a1.82 1.82 0 0 0 1.814 0l7.065-4.417A2.158 2.158 0 0 0 21 16.58V7.42c0-.772-.393-1.46-1.028-1.852zM12 3.125l5.526 3.453L12 10.03 6.474 6.578 12 3.125zm-1 8.878V20.5l-5.602-3.502a.707.707 0 0 1-.398-.636V8.14L11 12.003zm2 0 6 3.863v4.223a.707.707 0 0 1-.398.636L13 20.5V12.003z" />
+          </svg>
+        );
+      case 'claude':
+        return (
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2a1 1 0 0 1 1 1v2.07a7.002 7.002 0 0 1 4.93 4.93H20a1 1 0 1 1 0 2h-2.07a7.002 7.002 0 0 1-4.93 4.93V19a1 1 0 1 1-2 0v-2.07a7.002 7.002 0 0 1-4.93-4.93H4a1 1 0 1 1 0-2h2.07A7.002 7.002 0 0 1 11 5.07V3a1 1 0 0 1 1-1zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" />
+          </svg>
+        );
+      case 'gemini':
+        return (
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C12 7.52285 7.52285 12 2 12C7.52285 12 12 16.4771 12 22C12 16.4771 16.4771 12 22 12C16.4771 12 12 7.52285 12 2Z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2"/>
+            <circle cx="12" cy="5" r="2"/>
+            <path d="M12 7v4"/>
+            <line x1="8" y1="16" x2="8" y2="16"/>
+            <line x1="16" y1="16" x2="16" y2="16"/>
+          </svg>
+        );
+    }
+  };
+
+  const handleAiPlatformClick = (platform: { key: string; name: string; url_template?: string; prompt?: string }) => {
+    const prompt = platform.prompt || systemConfig?.ai_research?.prompt || systemConfig?.ai_research_prompt || "Give me an overview of SLOOR in Bangladesh — what they do, their products, delivery policies, and customer reviews.";
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(prompt).catch(() => {});
+    }
+
+    setAiToastMessage(`Prompt copied! Opening ${platform.name}...`);
+    setTimeout(() => {
+      setAiToastMessage(null);
+    }, 3500);
+
+    let url = platform.url_template || '';
+    if (url.includes('{prompt}')) {
+      url = url.replace('{prompt}', encodeURIComponent(prompt));
+    } else if (platform.key === 'chatgpt') {
+      url = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
+    } else if (platform.key === 'perplexity') {
+      url = `https://www.perplexity.ai/search?q=${encodeURIComponent(prompt)}`;
+    } else if (platform.key === 'claude') {
+      url = `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
+    } else if (platform.key === 'gemini') {
+      url = `https://gemini.google.com/app`;
+    }
+
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -158,38 +250,72 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     };
   }, []);
 
-  // Dynamically update document title and favicon based on systemConfig and current page
+  // Dynamically update document title, meta tags, canonical URL, and favicon
   React.useEffect(() => {
-    const siteTitle = systemConfig?.title || 'SLOOR';
-    
+    const siteTitle = systemConfig?.title || 'SLOOR BD';
+    const baseUrl = seoSettings?.global?.canonical_base_url || 'https://sloor.bd';
+    const cleanPath = pathname === '/' ? '' : pathname.replace(/\/$/, '');
+
+    // Private / protected routes that should not be indexed by search engines
+    const privateRoutes = ['/checkout', '/cart/recover', '/login', '/signup', '/profile'];
+    const isPrivate = privateRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+
+    // Check if on product detail page (handled dynamically by ProductDetailClient)
+    if (pathname.startsWith('/product/') || pathname === '/product') {
+      if (systemConfig?.favicon) {
+        let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.getElementsByTagName('head')[0].appendChild(link);
+        }
+        link.href = systemConfig.favicon;
+      }
+      return;
+    }
+
+    // Match static page from seoSettings.pages
+    const matchedPage = Array.isArray(seoSettings?.pages)
+      ? seoSettings.pages.find((p: any) => p.route_path === pathname || (pathname === '/' && p.route_path === '/'))
+      : null;
+
     const pageTitles: Record<string, string> = {
-      '/': `${siteTitle} | Affordable Luxury & Style`,
-      '/shop': `Shop Collections | ${siteTitle}`,
+      '/': seoSettings?.global?.meta_title || `${siteTitle} | Premium Sneakers & Lifestyle Footwear in Bangladesh`,
+      '/shop': 'Shop Sneakers & Footwear Collections | SLOOR BD',
+      '/track-order': 'Track Your Order Delivery Status | SLOOR BD',
+      '/reviews': 'Customer Reviews & Real Unboxing Feedback | SLOOR BD',
+      '/stores': 'Visit Our Physical Outlets & Stores | SLOOR BD',
+      '/contact': 'Contact Us & Customer Support | SLOOR BD',
       '/login': `Sign In | ${siteTitle}`,
       '/signup': `Create Account | ${siteTitle}`,
       '/checkout': `Secure Checkout | ${siteTitle}`,
       '/profile': `My Profile | ${siteTitle}`,
-      '/track-order': `Track Order | ${siteTitle}`,
-      '/reviews': `Customer Reviews | ${siteTitle}`,
-      '/stores': `Store Outlets | ${siteTitle}`,
-      '/contact': `Contact Us | ${siteTitle}`,
       '/about': `About Us | ${siteTitle}`,
       '/privacy-policy': `Privacy Policy | ${siteTitle}`,
       '/terms': `Terms & Conditions | ${siteTitle}`,
     };
 
-    let title = pageTitles[pathname];
+    let title = matchedPage?.meta_title || pageTitles[pathname];
     if (!title) {
-      if (pathname.startsWith('/product/') || pathname === '/product') {
-        title = `Product Details | ${siteTitle}`;
-      } else {
-        const routeName = pathname.replace(/^\//, '').replace(/-/g, ' ');
-        const formattedName = routeName.charAt(0).toUpperCase() + routeName.slice(1);
-        title = `${formattedName} | ${siteTitle}`;
-      }
+      const routeName = pathname.replace(/^\//, '').replace(/-/g, ' ');
+      const formattedName = routeName.charAt(0).toUpperCase() + routeName.slice(1);
+      title = `${formattedName} | ${siteTitle}`;
     }
 
-    document.title = title;
+    const description = matchedPage?.meta_description || seoSettings?.global?.meta_description || 'Discover authentic premium sneakers & footwear at SLOOR BD. Fast Cash on Delivery all over Bangladesh, 7-day easy exchange.';
+    const keywords = matchedPage?.meta_keywords || seoSettings?.global?.meta_keywords || 'sneakers, shoes, bd footwear, authentic kicks bangladesh, sloor bd';
+    const canonical = matchedPage?.canonical_url || `${baseUrl}${cleanPath || '/'}`;
+    const ogImage = matchedPage?.og_image || seoSettings?.global?.og_image || systemConfig?.logo || '/favicon.png';
+
+    updateHeadMeta({
+      title,
+      description,
+      keywords,
+      canonical,
+      ogImage: ogImage ? resolveImageUrl(ogImage) : undefined,
+      ogType: 'website',
+      isIndexable: !isPrivate && (matchedPage ? matchedPage.is_indexable !== false : true),
+    });
 
     if (systemConfig?.favicon) {
       let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
@@ -200,7 +326,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       }
       link.href = systemConfig.favicon;
     }
-  }, [pathname, systemConfig]);
+  }, [pathname, systemConfig, seoSettings]);
 
   const matchedSuggestions = React.useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -289,14 +415,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/items`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.status === 'success' && Array.isArray(json.data)) {
-            // Sort by sl
-            const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
-            setApiItems(sorted);
-          }
+        const json = await fetchWithCache(`${cleanUrl}/items`);
+        if (json && json.status === 'success' && Array.isArray(json.data)) {
+          const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
+          setApiItems(sorted);
         }
       } catch (e) {
         console.error('Failed to fetch items from API:', e);
@@ -306,14 +428,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/categories`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.status === 'success' && Array.isArray(json.data)) {
-            // Sort by sl
-            const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
-            setApiCategories(sorted);
-          }
+        const json = await fetchWithCache(`${cleanUrl}/categories`);
+        if (json && json.status === 'success' && Array.isArray(json.data)) {
+          const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
+          setApiCategories(sorted);
         }
       } catch (e) {
         console.error('Failed to fetch categories from API:', e);
@@ -323,14 +441,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/sub-categories`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.status === 'success' && Array.isArray(json.data)) {
-            // Sort by sl
-            const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
-            setApiSubCategories(sorted);
-          }
+        const json = await fetchWithCache(`${cleanUrl}/sub-categories`);
+        if (json && json.status === 'success' && Array.isArray(json.data)) {
+          const sorted = [...json.data].sort((a, b) => (a.sl || 0) - (b.sl || 0));
+          setApiSubCategories(sorted);
         }
       } catch (e) {
         console.error('Failed to fetch sub-categories from API:', e);
@@ -340,12 +454,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/products`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.status === 'success' && Array.isArray(json.data)) {
-            setApiProducts(json.data as WishlistProduct[]);
-          }
+        const json = await fetchWithCache(`${cleanUrl}/products`);
+        if (json && json.status === 'success' && Array.isArray(json.data)) {
+          setApiProducts(json.data as WishlistProduct[]);
         }
       } catch (e) {
         console.error('Failed to fetch wishlist products from API:', e);
@@ -357,9 +468,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       try {
         const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-        const res = await fetch(`${cleanUrl}/pages`);
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchWithCache(`${cleanUrl}/pages`);
+        if (json) {
           const items = json.result || json.data || [];
           if (Array.isArray(items)) {
             setApiPages(items);
@@ -369,13 +479,28 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         console.error('Failed to fetch pages from API:', e);
       }
     };
+    const fetchApiSeoSettings = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+        const json = await fetchWithCache(`${cleanUrl}/seo-settings`);
+        if (json && json.status_code === 200 && json.result) {
+          setSeoSettings(json.result);
+        }
+      } catch (e) {
+        console.error('Failed to fetch SEO settings from API:', e);
+      }
+    };
     Promise.allSettled([
       fetchApiItems(),
       fetchApiCategories(),
       fetchApiSubCategories(),
       fetchApiProducts(),
       fetchApiPages(),
-    ]);
+      fetchApiSeoSettings(),
+    ]).finally(() => {
+      setIsFooterDataLoading(false);
+    });
   }, []);
 
   const wishlistProducts = likedProducts
@@ -447,17 +572,39 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <GoogleTagManager />
       <MetaPixel />
       {/* Top Banner Message */}
-      <div className="w-full bg-slate-950 text-white py-1 px-4 text-center text-[9.5px] font-bold uppercase tracking-wider border-b border-slate-900 flex justify-center items-center gap-4">
-        <span className="flex items-center gap-1"><Truck className="w-3 h-3 text-amber-500" /> FAST CASH ON DELIVERY ALL OVER BANGLADESH</span>
-        <span className="hidden md:inline text-slate-600">•</span>
-        <span className="hidden md:flex items-center gap-1">
-          <Phone className="w-3 h-3 text-amber-500" /> HOTLINE: {isConfigLoading || !systemConfig ? (
+      <div className="w-full bg-slate-950 text-white py-1 px-3 sm:px-4 text-center text-[9.5px] font-bold uppercase tracking-wider border-b border-slate-900 flex justify-center items-center gap-3 sm:gap-4">
+        <span className="flex items-center gap-1">
+          <Truck className="w-3 h-3 text-amber-500 shrink-0" />
+          <span className="hidden sm:inline">FAST CASH ON DELIVERY ALL OVER BANGLADESH</span>
+          <span className="sm:hidden">FAST CASH ON DELIVERY</span>
+        </span>
+        <span className="text-slate-600">•</span>
+        <span className="flex items-center gap-1">
+          {isConfigLoading || !systemConfig ? (
             <span className="h-2.5 w-20 shimmer-effect rounded inline-block" />
-          ) : (
-            <a href={`tel:${systemConfig.phones[0]}`} className="hover:text-amber-400 hover:underline transition-colors">
-              {systemConfig.phones[0]}
-            </a>
-          )}
+          ) : (() => {
+            const rawPhone = systemConfig.whatsapp_number || systemConfig.phones?.[0] || '+8801895238135';
+            const digits = rawPhone.replace(/\D/g, '');
+            const waNumber = digits.startsWith('880') ? digits : (digits.startsWith('0') ? `88${digits}` : digits);
+            return (
+              <a
+                href={`https://wa.me/${waNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-bold transition-colors group cursor-pointer"
+                title="Chat on WhatsApp"
+              >
+                <svg
+                  className="w-3.5 h-3.5 fill-[#25D366] group-hover:scale-110 transition-transform shrink-0"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.652c1.746.953 3.71 1.455 5.711 1.456h.004c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 00-3.49-8.414Z"/>
+                </svg>
+                <span className="hidden sm:inline">WHATSAPP: {rawPhone}</span>
+                <span className="sm:hidden">{rawPhone}</span>
+              </a>
+            );
+          })()}
         </span>
       </div>
 
@@ -484,6 +631,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
           {/* Center Navigation Menu (Merged into Same Line) */}
           <nav className="hidden lg:flex items-center gap-5 xl:gap-6 text-[11px] font-extrabold uppercase tracking-wider text-slate-800">
+            <Link
+              href="/"
+              aria-current={pathname === '/' ? 'page' : undefined}
+              className={`py-1.5 transition-colors ${
+                pathname === '/' ? 'text-brand-orange font-black' : 'hover:text-brand-orange'
+              }`}
+            >
+              <span>Home</span>
+            </Link>
             <Link
               href="/shop"
               aria-current={pathname === '/shop' ? 'page' : undefined}
@@ -746,7 +902,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       </main>
 
       {/* Gorgeous Premium Footer */}
-      <footer className="bg-slate-950 text-slate-400 py-16 px-6 border-t border-slate-900 mt-16">
+      <footer className="bg-slate-950 text-slate-400 pt-12 pb-8 px-4 sm:px-6 border-t border-slate-900 mt-16">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 text-sm">
           {/* Brand Info */}
           <div className="flex flex-col gap-4">
@@ -758,6 +914,67 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </p>
             {/* Dynamic Social Links */}
             <SocialLinks className="mt-3" variant="dark" />
+
+            {/* AI Research / Ask AI in Footer */}
+            {(() => {
+              const aiConfig = systemConfig?.ai_research;
+              const isEnabled = aiConfig ? Boolean(aiConfig.is_enabled) : (systemConfig?.ai_research_enabled !== false);
+              if (!isEnabled) return null;
+
+              const title = aiConfig?.title || systemConfig?.ai_research_title || 'Research SLOOR with AI';
+              const platforms = (aiConfig?.platforms && aiConfig.platforms.length > 0)
+                ? aiConfig.platforms.filter((p: any) => p.is_active !== false)
+                : (systemConfig?.ai_research_platforms && systemConfig.ai_research_platforms.length > 0)
+                ? systemConfig.ai_research_platforms.filter((p: any) => p.is_active !== false)
+                : [
+                    { key: 'chatgpt', name: 'ChatGPT', is_active: true, url_template: 'https://chatgpt.com/?q={prompt}' },
+                    { key: 'perplexity', name: 'Perplexity', is_active: true, url_template: 'https://www.perplexity.ai/search?q={prompt}' },
+                    { key: 'claude', name: 'Claude', is_active: true, url_template: 'https://claude.ai/new?q={prompt}' },
+                    { key: 'gemini', name: 'Gemini', is_active: true, url_template: 'https://gemini.google.com/app' },
+                  ];
+
+              if (!platforms || platforms.length === 0) return null;
+
+              return (
+                <div className="mt-3 pt-3 border-t border-slate-900/90 flex flex-col gap-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300 tracking-wider uppercase">
+                    <Sparkles className="w-3.5 h-3.5 text-brand-orange" />
+                    <span>{title}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-normal leading-tight">
+                    Ask AI about our products, authentic quality &amp; policies:
+                  </p>
+                  <div className="flex items-center flex-wrap gap-1.5 pt-0.5">
+                    {platforms.map((plat: any) => {
+                      const isChatgpt = plat.key === 'chatgpt';
+                      const isPerplexity = plat.key === 'perplexity';
+                      const isClaude = plat.key === 'claude';
+
+                      const colorClasses = isChatgpt
+                        ? 'bg-emerald-950/40 text-emerald-300 border-emerald-900/70 hover:bg-emerald-900/60 hover:border-emerald-500/70 hover:text-emerald-200'
+                        : isPerplexity
+                        ? 'bg-cyan-950/40 text-cyan-300 border-cyan-900/70 hover:bg-cyan-900/60 hover:border-cyan-500/70 hover:text-cyan-200'
+                        : isClaude
+                        ? 'bg-amber-950/40 text-amber-300 border-amber-900/70 hover:bg-amber-900/60 hover:border-amber-500/70 hover:text-amber-200'
+                        : 'bg-indigo-950/40 text-indigo-300 border-indigo-900/70 hover:bg-indigo-900/60 hover:border-indigo-500/70 hover:text-indigo-200';
+
+                      return (
+                        <button
+                          key={plat.key}
+                          type="button"
+                          onClick={() => handleAiPlatformClick(plat)}
+                          title={`Ask ${plat.name} about SLOOR`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all duration-200 cursor-pointer shadow-sm hover:scale-[1.03] active:scale-[0.98] ${colorClasses}`}
+                        >
+                          {renderAiIcon(plat)}
+                          <span>{plat.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Quick Collections */}
@@ -766,29 +983,50 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               Shop Collections
             </h4>
             <div className="flex flex-col gap-2.5 font-medium pl-3 text-xs">
-              {apiItems && apiItems.length > 0 ? (
-                apiItems
-                  .filter((item) => item.is_show_footer == null || item.is_show_footer == 1 || item.is_show_footer === true)
-                  .map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/shop?item=${item.slug || encodeURIComponent((item.name || '').toLowerCase())}`}
-                    className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
-                  >
-                    {item.name}
-                  </Link>
-                ))
-              ) : (
-                ['Sneakers', 'Slides', "Men's Outfit", 'Watches', 'Accessories'].map((item) => (
-                  <Link
-                    key={item}
-                    href={`/shop?item=${encodeURIComponent(item.toLowerCase())}`}
-                    className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
-                  >
-                    {item}
-                  </Link>
-                ))
-              )}
+              {isFooterDataLoading ? (
+                <div className="flex flex-col gap-2">
+                  <div className="h-3 w-28 bg-slate-900 shimmer-effect rounded" />
+                  <div className="h-3 w-24 bg-slate-900 shimmer-effect rounded" />
+                  <div className="h-3 w-32 bg-slate-900 shimmer-effect rounded" />
+                </div>
+              ) : (() => {
+                const visibleItems = apiItems?.filter((item) => item.is_show_footer == null || item.is_show_footer == 1 || item.is_show_footer === true) || [];
+                const visibleCategories = apiCategories?.filter((cat) => cat.is_show_footer == 1 || cat.is_show_footer === true) || [];
+
+                if (visibleItems.length === 0 && visibleCategories.length === 0) {
+                  return (
+                    <Link
+                      href="/shop"
+                      className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+                    >
+                      All Products
+                    </Link>
+                  );
+                }
+
+                return (
+                  <>
+                    {visibleItems.map((item) => (
+                      <Link
+                        key={`item-${item.id}`}
+                        href={`/shop?item=${item.slug || encodeURIComponent((item.name || '').toLowerCase())}`}
+                        className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                    {visibleCategories.map((cat) => (
+                      <Link
+                        key={`cat-${cat.id}`}
+                        href={`/shop?category=${cat.slug || encodeURIComponent((cat.name || '').toLowerCase())}`}
+                        className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -798,7 +1036,13 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               Customer Policies
             </h4>
             <div className="flex flex-col gap-2.5 font-medium pl-3 text-xs">
-              {apiPages && apiPages.length > 0 ? (
+              {isFooterDataLoading ? (
+                <div className="flex flex-col gap-2">
+                  <div className="h-3 w-36 bg-slate-900 shimmer-effect rounded" />
+                  <div className="h-3 w-32 bg-slate-900 shimmer-effect rounded" />
+                  <div className="h-3 w-40 bg-slate-900 shimmer-effect rounded" />
+                </div>
+              ) : (
                 apiPages.map((p) => (
                   <Link
                     key={p.id}
@@ -806,16 +1050,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                     className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
                   >
                     {p.title}
-                  </Link>
-                ))
-              ) : (
-                ['7-Day Free Exchange', 'Cash On Delivery terms', 'Refund & Returns Policy'].map((item) => (
-                  <Link
-                    key={item}
-                    href={`/pages/${encodeURIComponent(item.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}`}
-                    className="text-left text-slate-300 hover:text-brand-orange transform hover:translate-x-1 transition-all duration-300 cursor-pointer"
-                  >
-                    {item}
                   </Link>
                 ))
               )}
@@ -907,12 +1141,22 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </div>
           </div>
         </div>
-
-        {/* Bottom Copyright & Legal Links Bar */}
-        <div className="border-t border-slate-900 mt-12 pt-6 text-center text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} {systemConfig?.title || 'SLOOR'}. All rights reserved.</p>
-        </div>
       </footer>
+
+      {/* Distinct Bottom Copyright Strip with Minimal Gap */}
+      <div className="w-full bg-black border-t border-slate-900 py-3.5 px-4 text-center">
+        <p className="max-w-7xl mx-auto text-[11.5px] font-medium tracking-wide text-slate-400">
+          © {new Date().getFullYear()} {systemConfig?.title || 'SLOOR'}. All rights reserved.
+        </p>
+      </div>
+
+      {/* AI Prompt Copied Toast Notification */}
+      {aiToastMessage && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white border border-brand-orange/40 shadow-2xl rounded-full px-5 py-2.5 text-xs font-semibold flex items-center gap-2.5 backdrop-blur-md animate-fade-in pointer-events-none">
+          <Sparkles className="w-4 h-4 text-brand-orange animate-spin" />
+          <span>{aiToastMessage}</span>
+        </div>
+      )}
 
 
       {/* Store Locator Map Modal */}
@@ -1042,43 +1286,43 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         </div>
       )}
 
-      {/* Fixed Floating Cart Button on Right Side */}
-      <button
-        id="floating-cart-btn"
-        type="button"
-        onClick={() => setIsCartOpen(true)}
-        aria-label="Open Shopping Bag"
-        title="Open Shopping Bag"
-        className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center bg-slate-950/95 hover:bg-black text-white py-3.5 px-3 rounded-l-2xl shadow-2xl border-l border-y border-white/15 backdrop-blur-md transition-all duration-300 hover:-translate-x-1.5 hover:shadow-orange-500/20 group cursor-pointer ${
-          isCartOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100'
-        } ${isBagShaking ? 'animate-cart-shake ring-4 ring-brand-orange/60 shadow-[0_0_35px_rgba(249,115,22,0.65)] !bg-slate-900' : ''}`}
-      >
-        {/* Shopping Bag Icon with animated count badge */}
-        <div className="relative mb-1 flex items-center justify-center">
-          <ShoppingBag className={`w-5.5 h-5.5 text-brand-orange group-hover:scale-110 transition-transform duration-200 stroke-[2] ${
-            isBagShaking ? 'scale-125' : ''
-          }`} />
-          {cart.length > 0 && (
+      {/* Fixed Floating Cart Button on Right Side - Only shown when cart has items */}
+      {cart.length > 0 && (
+        <button
+          id="floating-cart-btn"
+          type="button"
+          onClick={() => setIsCartOpen(true)}
+          aria-label="Open Shopping Bag"
+          title="Open Shopping Bag"
+          className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center bg-slate-950/95 hover:bg-black text-white py-3.5 px-3 rounded-l-2xl shadow-2xl border-l border-y border-white/15 backdrop-blur-md transition-all duration-300 hover:-translate-x-1.5 hover:shadow-orange-500/20 group cursor-pointer animate-in fade-in slide-in-from-right-5 ${
+            isCartOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100'
+          } ${isBagShaking ? 'animate-cart-shake ring-4 ring-brand-orange/60 shadow-[0_0_35px_rgba(249,115,22,0.65)] !bg-slate-900' : ''}`}
+        >
+          {/* Shopping Bag Icon with animated count badge */}
+          <div className="relative mb-1 flex items-center justify-center">
+            <ShoppingBag className={`w-5.5 h-5.5 text-brand-orange group-hover:scale-110 transition-transform duration-200 stroke-[2] ${
+              isBagShaking ? 'scale-125' : ''
+            }`} />
             <span className={`absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-brand-orange text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-slate-950 transition-all ${
               isBagShaking ? 'animate-bounce ring-orange-300 scale-110' : ''
             }`}>
               {cart.reduce((sum, item) => sum + item.quantity, 0)}
             </span>
-          )}
-        </div>
+          </div>
 
-        {/* Text / Item counter */}
-        <span className={`text-[10px] font-extrabold tracking-wider uppercase leading-tight transition-colors ${
-          isBagShaking ? 'text-brand-orange' : 'text-slate-200 group-hover:text-white'
-        }`}>
-          {cart.reduce((sum, item) => sum + item.quantity, 0)} {cart.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'ITEM' : 'ITEMS'}
-        </span>
+          {/* Text / Item counter */}
+          <span className={`text-[10px] font-extrabold tracking-wider uppercase leading-tight transition-colors ${
+            isBagShaking ? 'text-brand-orange' : 'text-slate-200 group-hover:text-white'
+          }`}>
+            {cart.reduce((sum, item) => sum + item.quantity, 0)} {cart.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'ITEM' : 'ITEMS'}
+          </span>
 
-        {/* Price Subtotal Pill */}
-        <span className="mt-1.5 px-2 py-0.5 rounded-full bg-brand-orange text-white text-[10px] font-black tracking-tight shadow-xs whitespace-nowrap group-hover:brightness-110 transition-all">
-          ৳{cartSubtotal}
-        </span>
-      </button>
+          {/* Price Subtotal Pill */}
+          <span className="mt-1.5 px-2 py-0.5 rounded-full bg-brand-orange text-white text-[10px] font-black tracking-tight shadow-xs whitespace-nowrap group-hover:brightness-110 transition-all">
+            ৳{cartSubtotal}
+          </span>
+        </button>
+      )}
 
       {/* Animated Right-Side Off-Canvas Wishlist Drawer */}
       <div className={`fixed inset-0 z-50 transition-all duration-300 ${isWishlistOpen ? 'visible' : 'invisible delay-300'}`}>
@@ -1505,6 +1749,18 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
             {/* Menu Items Accordion */}
             <div className="flex flex-col gap-2.5 mt-2">
+              <Link
+                href="/"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
+                  pathname === '/'
+                    ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                }`}
+              >
+                <Home className="h-5 w-5" />
+                Home
+              </Link>
               <Link
                 href="/shop"
                 onClick={() => setIsMobileMenuOpen(false)}

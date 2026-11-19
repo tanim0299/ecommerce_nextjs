@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import SafeHtml from '../../components/SafeHtml';
 import { useApp } from '../../context';
+import { updateHeadMeta } from '../../utils/seoHelper';
 
 interface PageDetail {
   id: number;
@@ -208,6 +209,20 @@ export default function CustomPolicyClient({ params }: { params?: Promise<{ slug
 
     return () => controller.abort();
   }, [slug]);
+
+  // Update Page SEO Metadata
+  useEffect(() => {
+    if (page) {
+      const siteTitle = systemConfig?.title || 'SLOOR BD';
+      const cleanDesc = page.description ? page.description.replace(/<[^>]*>?/gm, '').trim().slice(0, 160) : '';
+      updateHeadMeta({
+        title: page.meta_title || `${page.title} | ${siteTitle}`,
+        description: page.meta_description || (cleanDesc ? `${cleanDesc}...` : undefined),
+        canonical: `https://sloor.bd/pages/${encodeURIComponent(page.slug)}`,
+        isIndexable: true,
+      });
+    }
+  }, [page, systemConfig]);
 
   // Loading Skeleton State (Full Width Aligned)
   if (isLoading) {
