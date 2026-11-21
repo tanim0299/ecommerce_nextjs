@@ -110,11 +110,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
-        { url: '/favicon.ico', sizes: 'any' },
-        { url: '/favicon.png', type: 'image/png' },
+        { url: '/favicon.ico?v=2', sizes: 'any' },
+        { url: '/favicon.png?v=2', type: 'image/png' },
       ],
-      shortcut: '/favicon.ico',
-      apple: '/favicon.png',
+      shortcut: '/favicon.ico?v=2',
+      apple: '/favicon.png?v=2',
     },
     verification: {
       google: googleVerification,
