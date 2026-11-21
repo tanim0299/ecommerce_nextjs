@@ -32,6 +32,7 @@ import SafeHtml from '../../components/SafeHtml';
 import CustomerReviewsShowcase from '../../components/CustomerReviewsShowcase';
 import ProductComments from '../../components/ProductComments';
 import ProductQuickView from '../../components/ProductQuickView';
+import ProductFaqSection from '../../components/ProductFaqSection';
 import { updateHeadMeta } from '../../utils/seoHelper';
 
 type PriceValue = number | string | null;
@@ -116,6 +117,12 @@ interface ProductDetail {
   variants?: ProductVariant[];
   stock_qty?: number;
   stock_status?: string;
+  faqs?: Array<{
+    id: number;
+    question: string;
+    answer: string;
+    sl_no?: number;
+  }>;
 }
 
 interface AttributeGroup {
@@ -1325,6 +1332,13 @@ export default function ProductDetailClient() {
         <div className="mt-4 border-t border-slate-200/70 pt-4">
           <CustomerReviewsShowcase productId={product.id} />
         </div>
+
+        {/* Product FAQs Section (Directly after Customer Reviews) */}
+        <ProductFaqSection
+          productId={product.id}
+          initialFaqs={product.faqs}
+          productName={product.name}
+        />
 
         {/* Recommended / Related Products Section */}
         {relatedProducts.length > 0 && (
