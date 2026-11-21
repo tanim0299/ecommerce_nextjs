@@ -81,6 +81,9 @@ interface OrderDetails {
   };
   payment_method?: string;
   coupon_code?: string | null;
+  offer_id?: number | null;
+  offer_title?: string | null;
+  offer_discount_amount?: number | string | null;
   subtotal?: number | string;
   sub_total?: number | string;
   discount_amount?: number | string;
@@ -93,6 +96,8 @@ interface OrderDetails {
   summary?: {
     subtotal?: number | string;
     discount_amount?: number | string;
+    offer_discount_amount?: number | string;
+    offer_title?: string;
     delivery_fee?: number | string;
     grand_total?: number | string;
   };
@@ -206,6 +211,13 @@ export default function OrderSuccessClient() {
   const discount = Number(order?.summary?.discount_amount ?? order?.discount_amount ?? order?.discount ?? 0);
   const deliveryFee = Number(order?.summary?.delivery_fee ?? order?.delivery_fee ?? order?.shipping_charge ?? 0);
   const grandTotal = Number(order?.summary?.grand_total ?? order?.grand_total ?? (subtotal - discount + deliveryFee));
+
+  const offerSavings = Number(order?.summary?.offer_discount_amount ?? order?.offer_discount_amount ?? 0);
+  const offerTitle = order?.summary?.offer_title || order?.offer_title || 'Offer Campaign';
+  // Check if offer discount was deducted at order level or already embedded in item unit prices
+  const isOfferDeductedFromSubtotal = Math.abs((subtotal + deliveryFee - discount - grandTotal) - offerSavings) < 1;
+  const orderLevelOfferDiscount = isOfferDeductedFromSubtotal ? offerSavings : 0;
+  const isOfferEmbedded = !isOfferDeductedFromSubtotal && offerSavings > 0;
 
   const orderDateFormatted = order?.order_date 
     ? `${order.order_date} ${order?.order_time || ''}`.trim()
@@ -516,6 +528,18 @@ export default function OrderSuccessClient() {
                 <span className="text-slate-500">Subtotal</span>
                 <span className="text-slate-900 font-extrabold">৳{subtotal.toLocaleString()}</span>
               </div>
+              {orderLevelOfferDiscount > 0 && (
+                <div className="flex justify-between items-center text-amber-600 font-bold">
+                  <span>Offer Discount ({offerTitle})</span>
+                  <span>- ৳{orderLevelOfferDiscount.toLocaleString()}</span>
+                </div>
+              )}
+              {isOfferEmbedded && offerSavings > 0 && (
+                <div className="flex justify-between items-center text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60 font-semibold text-[11px]">
+                  <span>Campaign Savings ({offerTitle}):</span>
+                  <span className="font-bold">৳{offerSavings.toLocaleString()} saved</span>
+                </div>
+              )}
               {discount > 0 && (
                 <div className="flex justify-between items-center text-emerald-600 font-bold">
                   <span>Coupon Discount</span>
