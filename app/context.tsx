@@ -217,9 +217,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return `https://admin.sloor.bd${cleanPath}`;
     }
 
-    const basePath = process.env.NEXT_PUBLIC_IMAGE_BASE_PATH || 'http://127.0.0.1:8000';
+    const basePath = process.env.NEXT_PUBLIC_IMAGE_BASE_PATH || 'http://127.0.0.1:8088';
     const cleanBasePath = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (!cleanPath.startsWith('/storage/') && (cleanPath.startsWith('/offers/') || cleanPath.startsWith('/blogs/') || cleanPath.startsWith('/system/') || cleanPath.startsWith('/sliders/'))) {
+      cleanPath = `/storage${cleanPath}`;
+    }
     return `${cleanBasePath}${cleanPath}`;
   };
 
