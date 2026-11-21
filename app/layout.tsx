@@ -96,17 +96,37 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: siteDescription,
     robots: {
-      index: false,
-      follow: false,
-      nocache: true,
+      index: true,
+      follow: true,
       googleBot: {
-        index: false,
-        follow: false,
-        noimageindex: true,
+        index: true,
+        follow: true,
         "max-video-preview": -1,
-        "max-image-preview": "none",
+        "max-image-preview": "large",
         "max-snippet": -1,
       },
+    },
+    openGraph: {
+      title: siteTitle,
+      description: siteDescription,
+      url: 'https://sloor.bd',
+      siteName: 'SLOOR BD - Luxury Fashion & Shoes',
+      images: [
+        {
+          url: 'https://sloor.bd/banner-sub-1.jpg',
+          width: 1200,
+          height: 630,
+          alt: 'SLOOR BD',
+        },
+      ],
+      type: 'website',
+      locale: 'en_US',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: siteTitle,
+      description: siteDescription,
+      images: ['https://sloor.bd/banner-sub-1.jpg'],
     },
     icons: {
       icon: [

@@ -59,6 +59,7 @@ export function updateHeadMeta({
   if (ogImage) {
     setMetaTag('og:image', ogImage, 'property');
     setMetaTag('twitter:image', ogImage, 'name');
+    setMetaTag('twitter:card', 'summary_large_image', 'name');
   }
 
   setMetaTag('og:type', ogType, 'property');
