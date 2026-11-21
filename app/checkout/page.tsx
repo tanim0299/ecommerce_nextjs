@@ -25,7 +25,7 @@ import {
   Sparkles,
   CheckCircle2
 } from 'lucide-react';
-import { useApp } from '../context';
+import { useApp, CartItem } from '../context';
 
 interface AddressItem {
   id: number;
@@ -619,6 +619,9 @@ export default function CheckoutPage() {
         ? selectedSavedAddr.upazila_id 
         : detectedUpazilaId;
 
+      const activeOfferId = (cart.find((i: CartItem) => i.offer_id)?.offer_id) 
+        || (typeof window !== 'undefined' ? Number(sessionStorage.getItem('active_offer_id')) || null : null);
+
       const payload = {
         name: finalName,
         phone: finalPhone,
@@ -631,6 +634,7 @@ export default function CheckoutPage() {
         upazila_id: finalUpazilaId ? Number(finalUpazilaId) : null,
         payment_method: paymentMethod,
         coupon_code: appliedCoupon ? appliedCoupon.code : null,
+        offer_id: activeOfferId || undefined,
         cart_token: getCartToken(),
         fbp: document.cookie.match(/(?:^|;\s*)_fbp=([^;]+)/)?.[1] || null,
         fbc: document.cookie.match(/(?:^|;\s*)_fbc=([^;]+)/)?.[1] || null,

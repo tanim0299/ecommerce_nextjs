@@ -33,7 +33,8 @@ import {
   Sparkles,
   Home,
   ArrowUp,
-  Newspaper
+  Newspaper,
+  Flame
 } from 'lucide-react';
 import { useApp, getProductUrl } from './context';
 import { isProductMatch, filterAndSortByRelevance } from './utils/searchRelevance';
@@ -602,6 +603,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           <span className="sm:hidden">FAST CASH ON DELIVERY</span>
         </span>
         <span className="text-slate-600">•</span>
+        <Link href="/offers" className="flex items-center gap-1 hover:text-amber-400 transition-colors">
+          <Flame className="w-3 h-3 text-amber-500 shrink-0 animate-pulse" />
+          <span className="text-amber-400 font-extrabold tracking-wider">OFFERS &amp; FLASH SALE</span>
+        </Link>
+        <span className="text-slate-600">•</span>
         <span className="flex items-center gap-1">
           {isConfigLoading || !systemConfig ? (
             <span className="h-2.5 w-20 shimmer-effect rounded inline-block" />
@@ -781,6 +787,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             >
               <Newspaper className="h-3.5 w-3.5" />
               <span>Blog</span>
+            </Link>
+            <Link
+              href="/offers"
+              aria-current={pathname?.startsWith('/offers') ? 'page' : undefined}
+              className={`flex items-center gap-1.5 py-1.5 transition-colors ${pathname?.startsWith('/offers') ? 'text-brand-orange font-bold' : 'hover:text-brand-orange'
+                }`}
+            >
+              <Flame className="h-3.5 w-3.5 text-amber-500" />
+              <span>Offers</span>
             </Link>
           </nav>
 
@@ -1822,6 +1837,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               >
                 <Newspaper className="h-5 w-5" />
                 Blog
+              </Link>
+              <Link
+                href="/offers"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${pathname?.startsWith('/offers')
+                  ? 'border-amber-400/40 bg-amber-50 text-amber-700'
+                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-amber-300 hover:text-amber-700'
+                  }`}
+              >
+                <Flame className="h-5 w-5 text-amber-500" />
+                Offers &amp; Flash Sales
               </Link>
               {apiItems
                 .filter((item) => item.is_show_header == 1 || item.is_show_header === true)

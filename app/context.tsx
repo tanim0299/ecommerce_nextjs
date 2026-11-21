@@ -27,6 +27,7 @@ export interface CartItem {
   colorHex: string;
   quantity: number;
   image: string;
+  offer_id?: number;
 }
 
 export interface UserProfile {
