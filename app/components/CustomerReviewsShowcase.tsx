@@ -178,10 +178,10 @@ export default function CustomerReviewsShowcase({ productId }: Props) {
       {!productId && (
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Real Customer Reviews
+            What Customers Say About Us
           </h2>
           <p className="text-sm sm:text-base text-slate-500 font-normal mt-2.5 leading-relaxed">
-            What real customers say about our quality, delivery, and customer service.
+            Real experiences, honest feedback, and verified parcel unboxings from our valued customers across Bangladesh.
           </p>
         </div>
       )}
