@@ -591,7 +591,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 href={`https://wa.me/${waNumber}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-bold transition-colors group cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-white hover:text-emerald-300 font-bold transition-colors group cursor-pointer"
                 title="Chat on WhatsApp"
               >
                 <svg
