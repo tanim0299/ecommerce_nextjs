@@ -1033,10 +1033,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </div>
           </div>
 
-          {/* Customer Care */}
+          {/* Useful Links */}
           <div className="flex flex-col gap-4">
             <h4 className="font-black text-white uppercase tracking-wider text-xs border-l-2 border-brand-orange pl-3">
-              Customer Policies
+              Useful links
             </h4>
             <div className="flex flex-col gap-2.5 font-medium pl-3 text-xs">
               {isFooterDataLoading ? (
@@ -1072,10 +1072,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </div>
           </div>
 
-          {/* Newsletter / Contact */}
+          {/* Contact Us */}
           <div className="flex flex-col gap-4">
             <h4 className="font-black text-white uppercase tracking-wider text-xs border-l-2 border-brand-orange pl-3">
-              Contact & Updates
+              Contact us
             </h4>
             <p className="text-xs text-slate-400 font-light pl-3">
               Subscribe to get special discount coupons, restock alerts, and seasonal launches!
