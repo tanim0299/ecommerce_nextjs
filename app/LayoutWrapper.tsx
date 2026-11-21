@@ -9,15 +9,15 @@ import VoiceSearchModal from './components/VoiceSearchModal';
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { 
+import {
   Navigation,
-  Search, 
-  ShoppingBag, 
-  User, 
-  MapPin, 
-  X, 
-  Heart, 
-  Plus, 
+  Search,
+  ShoppingBag,
+  User,
+  MapPin,
+  X,
+  Heart,
+  Plus,
   Minus,
   Star,
   CheckCircle,
@@ -31,7 +31,8 @@ import {
   ChevronDown,
   Mic,
   Sparkles,
-  Home
+  Home,
+  ArrowUp
 } from 'lucide-react';
 import { useApp, getProductUrl } from './context';
 import { isProductMatch, filterAndSortByRelevance } from './utils/searchRelevance';
@@ -121,6 +122,26 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   const [isVoiceModalOpen, setIsVoiceModalOpen] = React.useState(false);
   const [headerAvatar, setHeaderAvatar] = React.useState<string | null>(null);
+  const [showBackToTop, setShowBackToTop] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      if (typeof window !== 'undefined') {
+        setShowBackToTop(window.scrollY > 300);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   React.useEffect(() => {
     if (user) {
@@ -160,7 +181,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       case 'chatgpt':
         return (
           <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.5045 4.5045 0 0 1-4.4945 4.4947zm-9.66-4.2254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1401-1.7464zM2.3417 8.571a4.466 4.466 0 0 1 2.3666-1.9728V12.2a.7665.7665 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3417 8.571zm15.9185 4.221-5.8428-3.3732 2.0201-1.1683a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.4021-.6768zm2.0107-3.0231-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L8.7272 10.2704V7.938a.0757.0757 0 0 1 .0332-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6702 4.6644zM12.9818 11.2372l-2.4776-1.4284 2.4776-1.4284 2.4776 1.4284z"/>
+            <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.5045 4.5045 0 0 1-4.4945 4.4947zm-9.66-4.2254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1401-1.7464zM2.3417 8.571a4.466 4.466 0 0 1 2.3666-1.9728V12.2a.7665.7665 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3417 8.571zm15.9185 4.221-5.8428-3.3732 2.0201-1.1683a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.4021-.6768zm2.0107-3.0231-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L8.7272 10.2704V7.938a.0757.0757 0 0 1 .0332-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6702 4.6644zM12.9818 11.2372l-2.4776-1.4284 2.4776-1.4284 2.4776 1.4284z" />
           </svg>
         );
       case 'perplexity':
@@ -184,11 +205,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       default:
         return (
           <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="10" rx="2"/>
-            <circle cx="12" cy="5" r="2"/>
-            <path d="M12 7v4"/>
-            <line x1="8" y1="16" x2="8" y2="16"/>
-            <line x1="16" y1="16" x2="16" y2="16"/>
+            <rect x="3" y="11" width="18" height="10" rx="2" />
+            <circle cx="12" cy="5" r="2" />
+            <path d="M12 7v4" />
+            <line x1="8" y1="16" x2="8" y2="16" />
+            <line x1="16" y1="16" x2="16" y2="16" />
           </svg>
         );
     }
@@ -198,7 +219,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     const prompt = platform.prompt || systemConfig?.ai_research?.prompt || systemConfig?.ai_research_prompt || "Give me an overview of SLOOR in Bangladesh — what they do, their products, delivery policies, and customer reviews.";
 
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(prompt).catch(() => {});
+      navigator.clipboard.writeText(prompt).catch(() => { });
     }
 
     setAiToastMessage(`Prompt copied! Opening ${platform.name}...`);
@@ -227,8 +248,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = React.useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
-  const [expandedItems, setExpandedItems] = React.useState<{[key: number]: boolean}>({});
-  const [expandedCategories, setExpandedCategories] = React.useState<{[key: number]: boolean}>({});
+  const [expandedItems, setExpandedItems] = React.useState<{ [key: number]: boolean }>({});
+  const [expandedCategories, setExpandedCategories] = React.useState<{ [key: number]: boolean }>({});
 
   const toggleExpandedItem = (id: number) => {
     setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
@@ -372,9 +393,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors group"
                 >
                   <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
-                    <img 
-                      src={mainImage ? resolveImageUrl(mainImage) : '/placeholder.jpg'} 
-                      alt={prod.name || ''} 
+                    <img
+                      src={mainImage ? resolveImageUrl(mainImage) : '/placeholder.jpg'}
+                      alt={prod.name || ''}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
@@ -539,13 +560,13 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     }
     if (systemConfig.logo) {
       return (
-        <img 
-          src={systemConfig.logo} 
-          alt={systemConfig.title} 
-          className={isFooter 
-            ? "h-12 sm:h-14 md:h-16 w-auto max-w-[240px] md:max-w-[280px] object-contain transition-all" 
+        <img
+          src={systemConfig.logo}
+          alt={systemConfig.title}
+          className={isFooter
+            ? "h-12 sm:h-14 md:h-16 w-auto max-w-[240px] md:max-w-[280px] object-contain transition-all"
             : "h-10 sm:h-12 md:h-14 lg:h-16 w-auto max-w-[200px] sm:max-w-[260px] md:max-w-[300px] object-contain transition-all"
-          } 
+          }
         />
       );
     }
@@ -598,7 +619,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   className="w-3.5 h-3.5 fill-[#25D366] group-hover:scale-110 transition-transform shrink-0"
                   viewBox="0 0 24 24"
                 >
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.652c1.746.953 3.71 1.455 5.711 1.456h.004c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 00-3.49-8.414Z"/>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.652c1.746.953 3.71 1.455 5.711 1.456h.004c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 00-3.49-8.414Z" />
                 </svg>
                 <span className="hidden sm:inline">
                   <span className="text-[#25D366]">WHATSAPP:</span>{' '}
@@ -614,11 +635,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       {/* Unified Single-Line Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-2.5 shadow-xs">
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3 lg:gap-6">
-          
+
           {/* Left: Mobile Menu Toggle + Logo */}
           <div className="flex items-center gap-2.5 shrink-0">
             {/* Hamburger Button for Mobile */}
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="lg:hidden flex items-center justify-center text-slate-700 hover:text-brand-orange p-1 transition-colors cursor-pointer"
               title="Menu"
@@ -637,18 +658,16 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             <Link
               href="/"
               aria-current={pathname === '/' ? 'page' : undefined}
-              className={`py-1.5 transition-colors ${
-                pathname === '/' ? 'text-brand-orange font-black' : 'hover:text-brand-orange'
-              }`}
+              className={`py-1.5 transition-colors ${pathname === '/' ? 'text-brand-orange font-black' : 'hover:text-brand-orange'
+                }`}
             >
               <span>Home</span>
             </Link>
             <Link
               href="/shop"
               aria-current={pathname === '/shop' ? 'page' : undefined}
-              className={`py-1.5 transition-colors ${
-                pathname === '/shop' ? 'text-brand-orange font-black' : 'hover:text-brand-orange'
-              }`}
+              className={`py-1.5 transition-colors ${pathname === '/shop' ? 'text-brand-orange font-black' : 'hover:text-brand-orange'
+                }`}
             >
               <span>Shop</span>
             </Link>
@@ -658,7 +677,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 const itemCategories = apiCategories.filter(
                   (cat) => cat.item?.id === item.id && (cat.is_show_header == 1 || cat.is_show_header === true)
                 );
-                
+
                 const hasAnySubCategories = itemCategories.some((cat) =>
                   apiSubCategories.some(
                     (sub) =>
@@ -670,7 +689,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
                 return (
                   <div key={item.id} className="relative group/nav py-1.5 cursor-pointer">
-                    <span 
+                    <span
                       onClick={() => handleCategoryClick(item.slug || (item.name || '').toLowerCase())}
                       className="hover:text-brand-orange transition-colors flex items-center gap-1 group-hover/nav:text-brand-orange"
                     >
@@ -679,7 +698,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                         <ChevronDown className="w-3 h-3 text-slate-400 group-hover/nav:text-brand-orange group-hover/nav:rotate-180 transition-transform duration-300 stroke-[2.5]" />
                       )}
                     </span>
-                    
+
                     {itemCategories.length > 0 && (
                       !hasAnySubCategories ? (
                         /* Case 1: Simple Elegant List Dropdown */
@@ -705,7 +724,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
                             return (
                               <div key={cat.id} className="flex flex-col gap-3 min-w-[130px]">
-                                <h5 
+                                <h5
                                   onClick={() => handleCategoryClick(cat.slug || (cat.name || '').toLowerCase())}
                                   className="font-black text-[10.5px] text-slate-900 tracking-widest uppercase border-b-2 border-brand-orange/30 pb-1.5 self-start hover:text-brand-orange transition-colors cursor-pointer"
                                 >
@@ -737,9 +756,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             <Link
               href="/track-order"
               aria-current={pathname === '/track-order' ? 'page' : undefined}
-              className={`flex items-center gap-1.5 py-1.5 transition-colors ${
-                pathname === '/track-order' ? 'text-brand-orange' : 'hover:text-brand-orange'
-              }`}
+              className={`flex items-center gap-1.5 py-1.5 transition-colors ${pathname === '/track-order' ? 'text-brand-orange' : 'hover:text-brand-orange'
+                }`}
             >
               <PackageSearch className="h-3.5 w-3.5" />
               <span>Track Order</span>
@@ -747,9 +765,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             <Link
               href="/reviews"
               aria-current={pathname === '/reviews' ? 'page' : undefined}
-              className={`flex items-center gap-1.5 py-1.5 transition-colors ${
-                pathname === '/reviews' ? 'text-brand-orange' : 'hover:text-brand-orange'
-              }`}
+              className={`flex items-center gap-1.5 py-1.5 transition-colors ${pathname === '/reviews' ? 'text-brand-orange' : 'hover:text-brand-orange'
+                }`}
             >
               <Star className="h-3.5 w-3.5" />
               <span>Reviews</span>
@@ -790,7 +807,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </div>
 
             {/* Search Toggle for Mobile */}
-            <button 
+            <button
               onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
               className="md:hidden flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer"
             >
@@ -798,19 +815,19 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <span className="text-[8.5px] font-bold tracking-wide uppercase text-slate-500">Search</span>
             </button>
 
-            
+
 
             {/* Profile */}
-            <Link 
+            <Link
               href={user ? "/profile" : "/login"}
               className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group text-center"
             >
               {headerAvatar ? (
                 <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-200 group-hover:scale-105 transition-transform flex items-center justify-center bg-slate-100 flex-shrink-0">
-                  <img 
-                    src={headerAvatar} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover" 
+                  <img
+                    src={headerAvatar}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
                   />
                 </div>
               ) : (
@@ -822,7 +839,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             </Link>
 
             {/* Wishlist */}
-            <button 
+            <button
               onClick={() => setIsWishlistOpen(true)}
               className="flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-colors cursor-pointer group"
             >
@@ -841,25 +858,21 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             <button
               id="header-cart-btn"
               onClick={() => setIsCartOpen(true)}
-              className={`flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-all cursor-pointer group ${
-                isBagShaking ? 'animate-cart-shake text-brand-orange scale-105' : ''
-              }`}
+              className={`flex flex-col items-center gap-0.5 text-slate-700 hover:text-brand-orange transition-all cursor-pointer group ${isBagShaking ? 'animate-cart-shake text-brand-orange scale-105' : ''
+                }`}
             >
               <div className="relative">
-                <ShoppingBag className={`w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform ${
-                  isBagShaking ? 'text-brand-orange scale-110' : ''
-                }`} />
+                <ShoppingBag className={`w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform ${isBagShaking ? 'text-brand-orange scale-110' : ''
+                  }`} />
                 {cart.length > 0 && (
-                  <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center transition-all ${
-                    isBagShaking ? 'animate-bounce ring-2 ring-orange-300' : ''
-                  }`}>
+                  <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center transition-all ${isBagShaking ? 'animate-bounce ring-2 ring-orange-300' : ''
+                    }`}>
                     {cart.reduce((sum, i) => sum + i.quantity, 0)}
                   </span>
                 )}
               </div>
-              <span className={`text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${
-                isBagShaking ? 'text-brand-orange font-black' : 'text-slate-500'
-              }`}>Bag</span>
+              <span className={`text-[8.5px] font-bold tracking-wide uppercase group-hover:text-slate-800 ${isBagShaking ? 'text-brand-orange font-black' : 'text-slate-500'
+                }`}>Bag</span>
             </button>
           </div>
         </div>
@@ -928,8 +941,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               const platforms = (aiConfig?.platforms && aiConfig.platforms.length > 0)
                 ? aiConfig.platforms.filter((p: any) => p.is_active !== false)
                 : (systemConfig?.ai_research_platforms && systemConfig.ai_research_platforms.length > 0)
-                ? systemConfig.ai_research_platforms.filter((p: any) => p.is_active !== false)
-                : [
+                  ? systemConfig.ai_research_platforms.filter((p: any) => p.is_active !== false)
+                  : [
                     { key: 'chatgpt', name: 'ChatGPT', is_active: true, url_template: 'https://chatgpt.com/?q={prompt}' },
                     { key: 'perplexity', name: 'Perplexity', is_active: true, url_template: 'https://www.perplexity.ai/search?q={prompt}' },
                     { key: 'claude', name: 'Claude', is_active: true, url_template: 'https://claude.ai/new?q={prompt}' },
@@ -956,10 +969,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                       const colorClasses = isChatgpt
                         ? 'bg-emerald-950/40 text-emerald-300 border-emerald-900/70 hover:bg-emerald-900/60 hover:border-emerald-500/70 hover:text-emerald-200'
                         : isPerplexity
-                        ? 'bg-cyan-950/40 text-cyan-300 border-cyan-900/70 hover:bg-cyan-900/60 hover:border-cyan-500/70 hover:text-cyan-200'
-                        : isClaude
-                        ? 'bg-amber-950/40 text-amber-300 border-amber-900/70 hover:bg-amber-900/60 hover:border-amber-500/70 hover:text-amber-200'
-                        : 'bg-indigo-950/40 text-indigo-300 border-indigo-900/70 hover:bg-indigo-900/60 hover:border-indigo-500/70 hover:text-indigo-200';
+                          ? 'bg-cyan-950/40 text-cyan-300 border-cyan-900/70 hover:bg-cyan-900/60 hover:border-cyan-500/70 hover:text-cyan-200'
+                          : isClaude
+                            ? 'bg-amber-950/40 text-amber-300 border-amber-900/70 hover:bg-amber-900/60 hover:border-amber-500/70 hover:text-amber-200'
+                            : 'bg-indigo-950/40 text-indigo-300 border-indigo-900/70 hover:bg-indigo-900/60 hover:border-indigo-500/70 hover:text-indigo-200';
 
                       return (
                         <button
@@ -1080,7 +1093,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             <p className="text-xs text-slate-400 font-light pl-3">
               Subscribe to get special discount coupons, restock alerts, and seasonal launches!
             </p>
-            
+
             {/* Newsletter Input */}
             <div className="flex pl-3">
               <input
@@ -1092,7 +1105,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 JOIN
               </button>
             </div>
-            
+
             {/* Contact Details */}
             <div className="flex flex-col gap-2 text-xs pl-3 mt-2 text-slate-400 font-light">
               {isConfigLoading || !systemConfig ? (
@@ -1105,7 +1118,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 <>
                   {systemConfig.phones && systemConfig.phones.length > 0 && (
                     <span>
-                      Helpline:{' ' }
+                      Helpline:{' '}
                       {systemConfig.phones.map((phone, idx) => (
                         <React.Fragment key={idx}>
                           {idx > 0 && ', '}
@@ -1118,7 +1131,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   )}
                   {systemConfig.emails && systemConfig.emails.length > 0 && (
                     <span>
-                      Email:{' ' }
+                      Email:{' '}
                       {systemConfig.emails.map((email, idx) => (
                         <React.Fragment key={idx}>
                           {idx > 0 && ', '}
@@ -1132,7 +1145,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   {systemConfig.address && (
                     <span>Address: {systemConfig.address}</span>
                   )}
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setIsStoreModalOpen(true)}
                     className="inline-flex items-center gap-1 text-brand-orange hover:text-orange-400 font-bold transition-colors mt-1.5 cursor-pointer text-left"
@@ -1164,11 +1177,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
       {/* Store Locator Map Modal */}
       {isStoreModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in"
           onClick={() => setIsStoreModalOpen(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden border border-slate-150 flex flex-col max-h-[92vh]"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1187,7 +1200,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   </p>
                 </div>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsStoreModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
@@ -1297,26 +1310,22 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           onClick={() => setIsCartOpen(true)}
           aria-label="Open Shopping Bag"
           title="Open Shopping Bag"
-          className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center bg-slate-950/95 hover:bg-black text-white py-3.5 px-3 rounded-l-2xl shadow-2xl border-l border-y border-white/15 backdrop-blur-md transition-all duration-300 hover:-translate-x-1.5 hover:shadow-orange-500/20 group cursor-pointer animate-in fade-in slide-in-from-right-5 ${
-            isCartOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100'
-          } ${isBagShaking ? 'animate-cart-shake ring-4 ring-brand-orange/60 shadow-[0_0_35px_rgba(249,115,22,0.65)] !bg-slate-900' : ''}`}
+          className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center bg-slate-950/95 hover:bg-black text-white py-3.5 px-3 rounded-l-2xl shadow-2xl border-l border-y border-white/15 backdrop-blur-md transition-all duration-300 hover:-translate-x-1.5 hover:shadow-orange-500/20 group cursor-pointer animate-in fade-in slide-in-from-right-5 ${isCartOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100'
+            } ${isBagShaking ? 'animate-cart-shake ring-4 ring-brand-orange/60 shadow-[0_0_35px_rgba(249,115,22,0.65)] !bg-slate-900' : ''}`}
         >
           {/* Shopping Bag Icon with animated count badge */}
           <div className="relative mb-1 flex items-center justify-center">
-            <ShoppingBag className={`w-5.5 h-5.5 text-brand-orange group-hover:scale-110 transition-transform duration-200 stroke-[2] ${
-              isBagShaking ? 'scale-125' : ''
-            }`} />
-            <span className={`absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-brand-orange text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-slate-950 transition-all ${
-              isBagShaking ? 'animate-bounce ring-orange-300 scale-110' : ''
-            }`}>
+            <ShoppingBag className={`w-5.5 h-5.5 text-brand-orange group-hover:scale-110 transition-transform duration-200 stroke-[2] ${isBagShaking ? 'scale-125' : ''
+              }`} />
+            <span className={`absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-brand-orange text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-slate-950 transition-all ${isBagShaking ? 'animate-bounce ring-orange-300 scale-110' : ''
+              }`}>
               {cart.reduce((sum, item) => sum + item.quantity, 0)}
             </span>
           </div>
 
           {/* Text / Item counter */}
-          <span className={`text-[10px] font-extrabold tracking-wider uppercase leading-tight transition-colors ${
-            isBagShaking ? 'text-brand-orange' : 'text-slate-200 group-hover:text-white'
-          }`}>
+          <span className={`text-[10px] font-extrabold tracking-wider uppercase leading-tight transition-colors ${isBagShaking ? 'text-brand-orange' : 'text-slate-200 group-hover:text-white'
+            }`}>
             {cart.reduce((sum, item) => sum + item.quantity, 0)} {cart.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'ITEM' : 'ITEMS'}
           </span>
 
@@ -1331,17 +1340,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <div className={`fixed inset-0 z-50 transition-all duration-300 ${isWishlistOpen ? 'visible' : 'invisible delay-300'}`}>
         {/* Backdrop */}
         <div
-          className={`absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 ${
-            isWishlistOpen ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 ${isWishlistOpen ? 'opacity-100' : 'opacity-0'
+            }`}
           onClick={() => setIsWishlistOpen(false)}
         />
 
         {/* Drawer Panel */}
         <div
-          className={`absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${
-            isWishlistOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
+          className={`absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${isWishlistOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
         >
           {/* Header */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -1486,17 +1493,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <div className={`fixed inset-0 z-50 transition-all duration-300 ${isCartOpen ? 'visible' : 'invisible delay-300'}`}>
         {/* Backdrop */}
         <div
-          className={`absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 ${
-            isCartOpen ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 ${isCartOpen ? 'opacity-100' : 'opacity-0'
+            }`}
           onClick={() => setIsCartOpen(false)}
         />
 
         {/* Drawer Panel */}
         <div
-          className={`absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${
-            isCartOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
+          className={`absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${isCartOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
         >
           {/* Header */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -1547,7 +1552,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div 
+                      <div
                         className="absolute inset-0 opacity-20"
                         style={{ backgroundColor: item.colorHex }}
                       />
@@ -1555,7 +1560,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                     <span className="absolute top-1 left-1 bg-slate-900/65 backdrop-blur-xs text-white text-[8px] font-black px-1 py-0.5 rounded uppercase tracking-widest z-10">
                       {item.size}
                     </span>
-                    <div 
+                    <div
                       className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-white shadow-xs z-10"
                       style={{ backgroundColor: item.colorHex }}
                       title={item.colorName}
@@ -1690,17 +1695,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       {/* Mobile Off-Canvas Menu Drawer (Left Side) */}
       <div className={`fixed inset-0 z-50 transition-all duration-300 ${isMobileMenuOpen ? 'visible' : 'invisible delay-300'}`}>
         {/* Backdrop overlay */}
-        <div 
+        <div
           className={`absolute inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
           onClick={() => setIsMobileMenuOpen(false)}
         />
-        
+
         {/* Drawer container (slides from left) */}
         <div className={`absolute top-0 bottom-0 left-0 w-80 max-w-[85vw] bg-white shadow-2xl flex flex-col transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           {/* Drawer Header */}
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               onClick={() => setIsMobileMenuOpen(false)}
               className="inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
             >
@@ -1710,7 +1715,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 <span className="font-extrabold text-slate-950 text-base tracking-tighter">{systemConfig?.title || 'STORE'}</span>
               )}
             </Link>
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(false)}
               className="text-slate-400 hover:text-slate-950 p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-all cursor-pointer"
             >
@@ -1755,11 +1760,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <Link
                 href="/"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
-                  pathname === '/'
-                    ? 'border-orange-200 bg-orange-50 text-brand-orange'
-                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
-                }`}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${pathname === '/'
+                  ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                  }`}
               >
                 <Home className="h-5 w-5" />
                 Home
@@ -1767,11 +1771,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <Link
                 href="/shop"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
-                  pathname === '/shop'
-                    ? 'border-orange-200 bg-orange-50 text-brand-orange'
-                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
-                }`}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${pathname === '/shop'
+                  ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                  }`}
               >
                 <ShoppingBag className="h-5 w-5" />
                 Shop
@@ -1779,11 +1782,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <Link
                 href="/track-order"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
-                  pathname === '/track-order'
-                    ? 'border-orange-200 bg-orange-50 text-brand-orange'
-                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
-                }`}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${pathname === '/track-order'
+                  ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                  }`}
               >
                 <PackageSearch className="h-5 w-5" />
                 Track Order
@@ -1791,11 +1793,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               <Link
                 href="/reviews"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${
-                  pathname === '/reviews'
-                    ? 'border-orange-200 bg-orange-50 text-brand-orange'
-                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
-                }`}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${pathname === '/reviews'
+                  ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                  }`}
               >
                 <Star className="h-5 w-5" />
                 Reviews
@@ -1924,6 +1925,22 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
       {/* Sloor AI Shopping Assistant */}
       <SloorAssistant />
+
+      {/* Floating Back to Top Button (Left Side) */}
+      <button
+        id="sloor-back-to-top"
+        type="button"
+        onClick={scrollToTop}
+        aria-label="Back to top"
+        title="Back to top"
+        className={`fixed bottom-5 sm:bottom-7 left-4 sm:left-6 z-40 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-slate-950/90 hover:bg-brand-orange text-white shadow-xl hover:shadow-2xl border border-white/20 hover:border-brand-orange backdrop-blur-md flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer group ${
+          showBackToTop
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 translate-y-6 pointer-events-none'
+        }`}
+      >
+        <ArrowUp className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:-translate-y-1 transition-transform duration-200 stroke-[2.5]" />
+      </button>
     </div>
   );
 }
