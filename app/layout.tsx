@@ -41,6 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
   let siteTitle = "SLOOR | Premium Apparel & Lifestyle";
   const siteDescription =
     "Premium clothing e-commerce retail store. Experience the finest combed cotton fabrics, refined tailoring, and modern designs for your everyday lifestyle.";
+  let ogImageUrl = "https://sloor.bd/favicon.png";
 
   try {
     const res = await fetch(`${cleanUrl}/system-config`, { cache: 'force-cache' });
@@ -48,6 +49,11 @@ export async function generateMetadata(): Promise<Metadata> {
       const json = await res.json();
       const cfg = json.data;
       if (cfg?.title) siteTitle = `${cfg.title}`;
+      if (cfg?.logo) {
+        const imageBasePath = process.env.NEXT_PUBLIC_IMAGE_BASE_PATH || 'https://admin.sloor.bd/';
+        const cleanImgBase = imageBasePath.endsWith('/') ? imageBasePath.slice(0, -1) : imageBasePath;
+        ogImageUrl = cfg.logo.startsWith('http') ? cfg.logo : `${cleanImgBase}${cfg.logo.startsWith('/') ? '' : '/'}${cfg.logo}`;
+      }
 
       const marketing = cfg?.marketing;
       const headScripts: string = marketing?.custom_head_scripts || '';
@@ -113,10 +119,10 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: 'SLOOR BD - Luxury Fashion & Shoes',
       images: [
         {
-          url: 'https://sloor.bd/banner-sub-1.jpg',
+          url: ogImageUrl,
           width: 1200,
           height: 630,
-          alt: 'SLOOR BD',
+          alt: siteTitle,
         },
       ],
       type: 'website',
@@ -126,7 +132,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title: siteTitle,
       description: siteDescription,
-      images: ['https://sloor.bd/banner-sub-1.jpg'],
+      images: [ogImageUrl],
     },
     icons: {
       icon: [

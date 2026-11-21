@@ -32,6 +32,18 @@ export async function generateMetadata({
     return {
       title: 'SLOOR BD | Luxury Footwear & Shoes',
       description: 'Explore authentic sneakers and luxury footwear at SLOOR BD.',
+      openGraph: {
+        title: 'SLOOR BD | Luxury Footwear & Shoes',
+        description: 'Explore authentic sneakers and luxury footwear at SLOOR BD.',
+        url: 'https://sloor.bd',
+        images: [{ url: 'https://sloor.bd/favicon.png', width: 1200, height: 630, alt: 'SLOOR BD' }],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: 'SLOOR BD | Luxury Footwear & Shoes',
+        description: 'Explore authentic sneakers and luxury footwear at SLOOR BD.',
+        images: ['https://sloor.bd/favicon.png'],
+      },
     };
   }
 
@@ -67,7 +79,7 @@ export async function generateMetadata({
     primaryImage = product.variants[0].image;
   }
 
-  let absoluteImageUrl = 'https://sloor.bd/banner-sub-1.jpg';
+  let absoluteImageUrl = 'https://sloor.bd/favicon.png';
   if (primaryImage) {
     if (primaryImage.startsWith('http://') || primaryImage.startsWith('https://')) {
       absoluteImageUrl = primaryImage;
@@ -109,9 +121,9 @@ export async function generateMetadata({
 
 export async function generateStaticParams() {
   try {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://admin.sloor.bd/api/';
     const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-    const res = await fetch(`${cleanUrl}/products`);
+    const res = await fetch(`${cleanUrl}/products`, { cache: 'no-store' });
     if (res.ok) {
       const json = await res.json();
       const items = json.result || json.data || [];
@@ -124,8 +136,8 @@ export async function generateStaticParams() {
         return params;
       }
     }
-  } catch {
-    // fallback if backend is not reachable at build time
+  } catch (err) {
+    console.error('generateStaticParams error:', err);
   }
   return [{ id: '1' }, { id: 'new-balance-9060' }];
 }
