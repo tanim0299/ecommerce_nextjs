@@ -32,7 +32,8 @@ import {
   Mic,
   Sparkles,
   Home,
-  ArrowUp
+  ArrowUp,
+  Newspaper
 } from 'lucide-react';
 import { useApp, getProductUrl } from './context';
 import { isProductMatch, filterAndSortByRelevance } from './utils/searchRelevance';
@@ -305,6 +306,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       '/shop': 'Shop Sneakers & Footwear Collections | SLOOR BD',
       '/track-order': 'Track Your Order Delivery Status | SLOOR BD',
       '/reviews': 'Customer Reviews & Real Unboxing Feedback | SLOOR BD',
+      '/blog': 'Sneaker Blog & Style Guides | SLOOR BD',
       '/stores': 'Visit Our Physical Outlets & Stores | SLOOR BD',
       '/contact': 'Contact Us & Customer Support | SLOOR BD',
       '/login': `Sign In | ${siteTitle}`,
@@ -770,6 +772,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             >
               <Star className="h-3.5 w-3.5" />
               <span>Reviews</span>
+            </Link>
+            <Link
+              href="/blog"
+              aria-current={pathname?.startsWith('/blog') ? 'page' : undefined}
+              className={`flex items-center gap-1.5 py-1.5 transition-colors ${pathname?.startsWith('/blog') ? 'text-brand-orange' : 'hover:text-brand-orange'
+                }`}
+            >
+              <Newspaper className="h-3.5 w-3.5" />
+              <span>Blog</span>
             </Link>
           </nav>
 
@@ -1800,6 +1811,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               >
                 <Star className="h-5 w-5" />
                 Reviews
+              </Link>
+              <Link
+                href="/blog"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`mb-1 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-black uppercase tracking-wide transition-colors ${pathname?.startsWith('/blog')
+                  ? 'border-orange-200 bg-orange-50 text-brand-orange'
+                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-orange-200 hover:text-brand-orange'
+                  }`}
+              >
+                <Newspaper className="h-5 w-5" />
+                Blog
               </Link>
               {apiItems
                 .filter((item) => item.is_show_header == 1 || item.is_show_header === true)
