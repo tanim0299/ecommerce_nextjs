@@ -74,6 +74,28 @@ export async function generateMetadata({
   };
 }
 
+export async function generateStaticParams() {
+  try {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://admin.sloor.bd/api';
+    const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+    const res = await fetch(`${cleanUrl}/blogs?limit=50`);
+    if (res.ok) {
+      const json = await res.json();
+      const items = json.result || json.data || [];
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map((b: any) => ({ slug: String(b.slug) }));
+      }
+    }
+  } catch {
+    // fallback if backend is not reachable at build time
+  }
+  return [
+    { slug: 'how-to-clean-maintain-suede-sneakers-bangladesh' },
+    { slug: 'top-5-sneaker-styling-rules-every-guy-should-know' },
+    { slug: 'sneaker-sizing-guide-how-to-find-perfect-fit-online' },
+  ];
+}
+
 export default async function BlogDetailPage({
   params,
 }: {
