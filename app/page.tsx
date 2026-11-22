@@ -19,6 +19,7 @@ import ProductQuickView from './components/ProductQuickView';
 import WatchBeforeBuyModal from './components/WatchBeforeBuyModal';
 import WhyChooseUs from './components/WhyChooseUs';
 import CustomerReviewsShowcase from './components/CustomerReviewsShowcase';
+import HomeFaqSection from './components/HomeFaqSection';
 
 interface SliderItem {
   id: number;
@@ -1115,6 +1116,9 @@ export default function Home() {
 
           {/* Customer Reviews (Google-style, below Why Choose Us) */}
             <CustomerReviewsShowcase />
+
+          {/* Frequently Asked Questions Section (below Customer Reviews) */}
+            <HomeFaqSection />
 
           </div>
         </>

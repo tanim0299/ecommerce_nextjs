@@ -347,10 +347,15 @@ function ShopCatalogContent() {
 
   // Update Category & Search SEO Metadata
   useEffect(() => {
+    const defaultOrigin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://sloor.bd');
+
     if (selectedCategory) {
       const catTitle = (selectedCategory as any).meta_title || `${selectedCategory.name} Shoes & Sneakers | SLOOR BD`;
       const catDesc = (selectedCategory as any).meta_description || `Explore authentic ${selectedCategory.name} sneakers and footwear at SLOOR BD. Fast Cash on Delivery in Bangladesh.`;
-      const catCanonical = (selectedCategory as any).canonical_url || `https://sloor.bd/shop?category=${encodeURIComponent(selectedCategory.slug || selectedCategory.name.toLowerCase())}`;
+      const rawCanonical = (selectedCategory as any).canonical_url;
+      const catCanonical = rawCanonical
+        ? (rawCanonical.startsWith('http') ? rawCanonical : `${defaultOrigin}${rawCanonical.startsWith('/') ? '' : '/'}${rawCanonical}`)
+        : `${defaultOrigin}/shop?category=${encodeURIComponent(selectedCategory.slug || selectedCategory.name.toLowerCase())}`;
       updateHeadMeta({
         title: catTitle,
         description: catDesc,
@@ -367,7 +372,7 @@ function ShopCatalogContent() {
       updateHeadMeta({
         title: 'Shop Sneakers & Footwear Collections | SLOOR BD',
         description: 'Browse the complete collection of authentic sneakers, running shoes, and luxury lifestyle footwear at SLOOR BD.',
-        canonical: 'https://sloor.bd/shop',
+        canonical: `${defaultOrigin}/shop`,
         isIndexable: true,
       });
     }

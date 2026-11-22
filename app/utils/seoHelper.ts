@@ -41,19 +41,25 @@ export function updateHeadMeta({
   }
 
   if (canonical) {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://sloor.bd';
+    const absoluteCanonical = canonical.startsWith('http://') || canonical.startsWith('https://')
+      ? canonical
+      : `${origin}${canonical.startsWith('/') ? '' : '/'}${canonical}`;
+
     let link = document.querySelector<HTMLLinkElement>("link[rel='canonical']");
     if (!link) {
       link = document.createElement('link');
       link.rel = 'canonical';
       document.head.appendChild(link);
     }
-    link.href = canonical;
-    setMetaTag('og:url', canonical, 'property');
+    link.href = absoluteCanonical;
+    setMetaTag('og:url', absoluteCanonical, 'property');
   }
 
   if (ogImage) {
     setMetaTag('og:image', ogImage, 'property');
     setMetaTag('twitter:image', ogImage, 'name');
+    setMetaTag('twitter:card', 'summary_large_image', 'name');
   }
 
   setMetaTag('og:type', ogType, 'property');

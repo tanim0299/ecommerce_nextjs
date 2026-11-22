@@ -170,35 +170,68 @@ export default function CustomerReviewsShowcase({ productId }: Props) {
   return (
     <section
       id="customer-reviews-section"
-      className="w-full my-4"
+      className={`w-full ${productId ? 'my-4' : 'py-12 sm:py-16'}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Homepage Section Header - Styled identically to Why Choose Us */}
+      {!productId && (
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            What Customers Say About Us
+          </h2>
+          <p className="text-sm sm:text-base text-slate-500 font-normal mt-2.5 leading-relaxed">
+            Real experiences, honest feedback, and verified parcel unboxings from our valued customers across Bangladesh.
+          </p>
+        </div>
+      )}
+
       <div className="bg-gradient-to-b from-slate-50/90 to-white/95 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-8 shadow-xs">
         {/* Header */}
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-          <div className="flex flex-col gap-1.5">
-            <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#c07828]">
-              <GoogleG /> {productId ? 'Real Customer Experiences & Proofs' : 'Real Customer Reviews'}
-            </span>
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl sm:text-3xl font-black text-slate-900">{average.toFixed(1)}</span>
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <Star
-                    key={n}
-                    className={`w-4 h-4 sm:w-5 sm:h-5 ${n <= Math.round(average) ? 'fill-[#f5b301] text-[#f5b301]' : 'text-slate-300'}`}
-                  />
-                ))}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          {productId ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#c07828]">
+                <GoogleG /> Real Customer Experiences &amp; Proofs
+              </span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900">{average.toFixed(1)}</span>
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={`w-4 h-4 sm:w-5 sm:h-5 ${n <= Math.round(average) ? 'fill-[#f5b301] text-[#f5b301]' : 'text-slate-300'}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-slate-500 font-semibold">({reviews.length} authentic reviews)</span>
               </div>
-              <span className="text-xs text-slate-500 font-semibold">({reviews.length} authentic reviews)</span>
+              <p className="text-xs text-slate-500 hidden sm:block">
+                Feedback, parcel unboxing proofs, and verified buyer reviews for our footwear.
+              </p>
             </div>
-            <p className="text-xs text-slate-500 hidden sm:block">
-              {productId
-                ? 'Feedback, parcel unboxing proofs, and verified buyer reviews for our footwear.'
-                : 'What real customers say about our quality, delivery, and customer service.'}
-            </p>
-          </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-2xs">
+                <GoogleG />
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">Verified Reviews</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900">{average.toFixed(1)}</span>
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={`w-4 h-4 sm:w-5 sm:h-5 ${n <= Math.round(average) ? 'fill-[#f5b301] text-[#f5b301]' : 'text-slate-300'}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-slate-500 font-semibold hidden sm:inline">
+                  ({reviews.length} authentic reviews)
+                </span>
+              </div>
+            </div>
+          )}
 
           {reviews.length > 1 && (
             <div className="flex items-center gap-2 shrink-0">

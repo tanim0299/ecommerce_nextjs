@@ -1,5 +1,70 @@
+import type { Metadata } from 'next';
 import CustomPolicyClient from './CustomPolicyClient';
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const resolvedParams = await params;
+  const slug = resolvedParams?.slug || '';
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://admin.sloor.bd/api';
+  const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+
+  let pageData: any = null;
+  try {
+    const res = await fetch(`${cleanUrl}/pages/${encodeURIComponent(slug)}`);
+    if (res.ok) {
+      const json = await res.json();
+      pageData = json.data || json.result;
+    }
+  } catch (err) {
+    console.error('Error fetching page metadata:', err);
+  }
+
+  const defaultCanonical = `https://sloor.bd/pages/${slug}`;
+  if (!pageData) {
+    return {
+      title: 'SLOOR BD | Information & Policies',
+      alternates: {
+        canonical: defaultCanonical,
+      },
+    };
+  }
+
+  const title = pageData.meta_title || `${pageData.title} | SLOOR BD`;
+  const description =
+    pageData.meta_description ||
+    (pageData.description
+      ? pageData.description
+          .replace(/<[^>]*>?/gm, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 160)
+      : 'SLOOR BD official policy and customer information.');
+  const canonicalUrl = pageData.canonical_url || defaultCanonical;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'SLOOR BD',
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
+  };
+}
 
 export async function generateStaticParams() {
   try {

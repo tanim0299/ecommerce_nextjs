@@ -182,11 +182,27 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
 
   if (productId === null) return null;
 
-  const salePrice = numericPrice(selectedVariant?.sale_price ?? product?.sale_price)
+  const activeOffer = (product as any)?.active_offer;
+  const rawBasePrice = numericPrice(selectedVariant?.regular_price ?? product?.regular_price)
     ?? numericPrice(selectedVariant?.discount_price ?? product?.discount_price)
-    ?? numericPrice(selectedVariant?.regular_price ?? product?.regular_price);
-  const regularPrice = numericPrice(selectedVariant?.regular_price ?? product?.regular_price);
-  const hasDiscount = salePrice !== null && regularPrice !== null && regularPrice > salePrice;
+    ?? numericPrice(selectedVariant?.sale_price ?? product?.sale_price);
+
+  let offerPrice: number | null = null;
+  if (activeOffer && rawBasePrice !== null) {
+    if (activeOffer.offer_price) {
+      offerPrice = Number(activeOffer.offer_price);
+    } else if (activeOffer.discount_type === 'percent') {
+      offerPrice = Math.max(0, rawBasePrice - (rawBasePrice * (activeOffer.discount_value / 100)));
+    } else {
+      offerPrice = Math.max(0, rawBasePrice - activeOffer.discount_value);
+    }
+  }
+
+  const salePrice = offerPrice ?? numericPrice(selectedVariant?.sale_price ?? product?.sale_price)
+    ?? numericPrice(selectedVariant?.discount_price ?? product?.discount_price)
+    ?? rawBasePrice;
+  const regularPrice = (offerPrice !== null && rawBasePrice !== null) ? rawBasePrice : numericPrice(selectedVariant?.regular_price ?? product?.regular_price);
+  const hasDiscount = (offerPrice !== null && rawBasePrice !== null && rawBasePrice > offerPrice) || (salePrice !== null && regularPrice !== null && regularPrice > salePrice);
   const hasVariants = Boolean(product?.has_variant || (product?.variants?.length ?? 0) > 0);
   const currentImage = variantImage || images[selectedImageIndex];
   const colorAttribute = selectedVariant?.attributes?.find(attribute =>
@@ -238,7 +254,12 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
       colorHex: '#111827',
       quantity,
       image: currentImage ? resolveImageUrl(currentImage) : '',
+      offer_id: activeOffer?.id,
     }, e);
+
+    if (activeOffer?.id && typeof window !== 'undefined') {
+      sessionStorage.setItem('active_offer_id', String(activeOffer.id));
+    }
     onClose();
   };
 
@@ -343,12 +364,26 @@ export default function ProductQuickView({ productId, onClose }: ProductQuickVie
               </div>
               <h2 className="text-2xl font-black leading-tight text-slate-900">{product.name}</h2>
 
+              {/* Active Promotional Offer Tag */}
+              {activeOffer && (
+                <div className="mb-2.5 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-50 px-3 py-2 text-xs font-bold text-slate-900">
+                  <span className="flex h-5 w-5 items-center justify-center rounded bg-amber-500 text-[10px] font-black text-slate-950">⚡</span>
+                  <span className="font-black text-amber-700 uppercase">{activeOffer.badge_text || activeOffer.discount_badge}:</span>
+                  <span className="text-slate-800">{activeOffer.title}</span>
+                </div>
+              )}
+
               {salePrice !== null && (
                 <div className="mt-5 flex flex-wrap items-baseline gap-3 border-y border-slate-100 py-4">
                   {hasDiscount && regularPrice !== null && <span className="text-sm font-bold text-slate-400 line-through">BDT {formatPrice(regularPrice)}</span>}
-                  <span className="text-2xl font-black text-slate-950">BDT {formatPrice(salePrice)}</span>
+                  <span className={`text-2xl font-black ${activeOffer ? 'text-rose-600' : 'text-slate-950'}`}>BDT {formatPrice(salePrice)}</span>
                   {hasDiscount && regularPrice !== null && (
                     <span className="rounded bg-rose-100 px-2 py-1 text-[10px] font-black text-rose-600">SAVE BDT {formatPrice(regularPrice - salePrice)}</span>
+                  )}
+                  {activeOffer && (
+                    <span className="rounded bg-amber-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-950">
+                      {activeOffer.discount_badge || 'OFFER'}
+                    </span>
                   )}
                 </div>
               )}

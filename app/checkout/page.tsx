@@ -25,7 +25,7 @@ import {
   Sparkles,
   CheckCircle2
 } from 'lucide-react';
-import { useApp } from '../context';
+import { useApp, CartItem } from '../context';
 
 interface AddressItem {
   id: number;
@@ -395,6 +395,28 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
+  // Real-time Lead & Cart Abandonment Sync:
+  // As soon as user types email or phone or name, debounced sync immediately fires to backend
+  useEffect(() => {
+    if (!cart || cart.length === 0) return;
+    const hasContact = Boolean(
+      (billingEmail && billingEmail.includes('@')) ||
+      (billingPhone && billingPhone.length >= 7) ||
+      billingName
+    );
+    if (!hasContact) return;
+
+    const timer = setTimeout(() => {
+      syncCart(cart, {
+        email: billingEmail || null,
+        phone: billingPhone || null,
+        name: billingName || null,
+      }, token);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [cart, billingEmail, billingPhone, billingName, token]);
+
   // Pricing calculations
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = couponDiscount;
@@ -597,6 +619,9 @@ export default function CheckoutPage() {
         ? selectedSavedAddr.upazila_id 
         : detectedUpazilaId;
 
+      const activeOfferId = (cart.find((i: CartItem) => i.offer_id)?.offer_id) 
+        || (typeof window !== 'undefined' ? Number(sessionStorage.getItem('active_offer_id')) || null : null);
+
       const payload = {
         name: finalName,
         phone: finalPhone,
@@ -609,6 +634,7 @@ export default function CheckoutPage() {
         upazila_id: finalUpazilaId ? Number(finalUpazilaId) : null,
         payment_method: paymentMethod,
         coupon_code: appliedCoupon ? appliedCoupon.code : null,
+        offer_id: activeOfferId || undefined,
         cart_token: getCartToken(),
         fbp: document.cookie.match(/(?:^|;\s*)_fbp=([^;]+)/)?.[1] || null,
         fbc: document.cookie.match(/(?:^|;\s*)_fbc=([^;]+)/)?.[1] || null,
@@ -1213,6 +1239,7 @@ export default function CheckoutPage() {
                         placeholder="e.g. Tanim Rahman"
                         value={billingName}
                         onChange={(e) => setBillingName(e.target.value)}
+                        onBlur={() => syncCart(cart, { email: billingEmail, phone: billingPhone, name: billingName }, token)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-orange text-slate-800 placeholder-slate-400 transition-colors"
                       />
                     </div>

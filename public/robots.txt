@@ -1,2 +1,29 @@
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /order-success/
+Disallow: /profile/
+Disallow: /login/
+Disallow: /signup/
+
+# Social Sharing Bot Access (Facebook, WhatsApp, Twitter, Telegram, LinkedIn)
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+Sitemap: https://sloor.bd/sitemap.xml

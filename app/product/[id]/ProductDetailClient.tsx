@@ -32,6 +32,7 @@ import SafeHtml from '../../components/SafeHtml';
 import CustomerReviewsShowcase from '../../components/CustomerReviewsShowcase';
 import ProductComments from '../../components/ProductComments';
 import ProductQuickView from '../../components/ProductQuickView';
+import ProductFaqSection from '../../components/ProductFaqSection';
 import { updateHeadMeta } from '../../utils/seoHelper';
 
 type PriceValue = number | string | null;
@@ -116,6 +117,12 @@ interface ProductDetail {
   variants?: ProductVariant[];
   stock_qty?: number;
   stock_status?: string;
+  faqs?: Array<{
+    id: number;
+    question: string;
+    answer: string;
+    sl_no?: number;
+  }>;
 }
 
 interface AttributeGroup {
@@ -515,13 +522,29 @@ export default function ProductDetailClient() {
     });
   }, [product]);
 
-  const salePrice = numericPrice(selectedVariant?.sale_price ?? product?.sale_price);
-  const fallbackDiscountPrice = numericPrice(selectedVariant?.discount_price ?? product?.discount_price);
-  const regularPrice = numericPrice(selectedVariant?.regular_price ?? product?.regular_price);
-  const displayedPrice = salePrice ?? fallbackDiscountPrice ?? regularPrice;
-  const hasDiscount = displayedPrice !== null && regularPrice !== null && regularPrice > displayedPrice;
-  const savingAmount = hasDiscount ? regularPrice - displayedPrice : null;
-  const discountPercentage = hasDiscount && regularPrice ? Math.round(((regularPrice - displayedPrice) / regularPrice) * 100) : null;
+  const activeOffer = (product as any)?.active_offer;
+  const rawSalePrice = numericPrice(selectedVariant?.sale_price ?? product?.sale_price);
+  const rawDiscountPrice = numericPrice(selectedVariant?.discount_price ?? product?.discount_price);
+  const rawRegularPrice = numericPrice(selectedVariant?.regular_price ?? product?.regular_price);
+  const basePrice = rawDiscountPrice ?? rawRegularPrice ?? rawSalePrice;
+
+  // If there's an active campaign offer on this product
+  let offerPrice: number | null = null;
+  if (activeOffer && basePrice !== null) {
+    if (activeOffer.offer_price) {
+      offerPrice = Number(activeOffer.offer_price);
+    } else if (activeOffer.discount_type === 'percent') {
+      offerPrice = Math.max(0, basePrice - (basePrice * (activeOffer.discount_value / 100)));
+    } else {
+      offerPrice = Math.max(0, basePrice - activeOffer.discount_value);
+    }
+  }
+
+  const displayedPrice = offerPrice ?? rawSalePrice ?? rawDiscountPrice ?? rawRegularPrice;
+  const regularPrice = (offerPrice !== null && basePrice !== null) ? basePrice : rawRegularPrice;
+  const hasDiscount = (offerPrice !== null && basePrice !== null && basePrice > offerPrice) || (displayedPrice !== null && regularPrice !== null && regularPrice > displayedPrice);
+  const savingAmount = offerPrice !== null && basePrice !== null ? basePrice - offerPrice : (hasDiscount && regularPrice !== null && displayedPrice !== null ? regularPrice - displayedPrice : null);
+  const discountPercentage = hasDiscount && regularPrice && displayedPrice !== null ? Math.round(((regularPrice - displayedPrice) / regularPrice) * 100) : null;
 
   const colorAttribute = selectedVariant?.attributes?.find(attribute =>
     attribute.attribute_name.toLocaleLowerCase().includes('color')
@@ -585,7 +608,12 @@ export default function ProductDetailClient() {
       colorHex: '#111827',
       quantity,
       image: selectedImage ? resolveImageUrl(selectedImage) : '',
+      offer_id: activeOffer?.id,
     }, e);
+
+    if (activeOffer?.id && typeof window !== 'undefined') {
+      sessionStorage.setItem('active_offer_id', String(activeOffer.id));
+    }
   };
 
   const handleBuyNow = (e?: React.MouseEvent) => {
@@ -602,7 +630,12 @@ export default function ProductDetailClient() {
         colorHex: '#111827',
         quantity,
         image: selectedImage ? resolveImageUrl(selectedImage) : '',
+        offer_id: activeOffer?.id,
       }, e);
+
+      if (activeOffer?.id && typeof window !== 'undefined') {
+        sessionStorage.setItem('active_offer_id', String(activeOffer.id));
+      }
     }
     setIsCartOpen(false);
     router.push('/checkout');
@@ -1038,10 +1071,31 @@ export default function ProductDetailClient() {
               </div>
             </div>
 
+            {/* Active Promotional Offer Banner */}
+            {activeOffer && (
+              <Link
+                href={`/offers/${activeOffer.slug}`}
+                className="flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-slate-900 group/offer hover:bg-amber-500/15 transition-all mb-1"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500 text-slate-950 font-black text-xs shrink-0">
+                    ⚡
+                  </span>
+                  <div className="text-xs">
+                    <span className="font-black text-amber-700 uppercase mr-1">{activeOffer.badge_text || activeOffer.discount_badge}:</span>
+                    <span className="font-bold text-slate-800">{activeOffer.title}</span>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-amber-700 group-hover/offer:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                  View Offer &rarr;
+                </span>
+              </Link>
+            )}
+
             {/* Pricing (Directly on White Background without heavy Card Box) */}
             {displayedPrice !== null && (
               <div className="flex flex-wrap items-baseline gap-2.5 py-1">
-                <span className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+                <span className={`text-2xl sm:text-3xl font-black ${activeOffer ? 'text-rose-600' : 'text-slate-950'} tracking-tight`}>
                   BDT {formatPrice(displayedPrice)}
                 </span>
                 {hasDiscount && regularPrice !== null && (
@@ -1052,6 +1106,11 @@ export default function ProductDetailClient() {
                 {savingAmount !== null && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 border border-rose-100 text-xs font-bold">
                     Save BDT {formatPrice(savingAmount)}
+                  </span>
+                )}
+                {activeOffer && (
+                  <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 rounded shadow-xs">
+                    {activeOffer.discount_badge || 'OFFER DEAL'}
                   </span>
                 )}
               </div>
@@ -1325,6 +1384,13 @@ export default function ProductDetailClient() {
         <div className="mt-4 border-t border-slate-200/70 pt-4">
           <CustomerReviewsShowcase productId={product.id} />
         </div>
+
+        {/* Product FAQs Section (Directly after Customer Reviews) */}
+        <ProductFaqSection
+          productId={product.id}
+          initialFaqs={product.faqs}
+          productName={product.name}
+        />
 
         {/* Recommended / Related Products Section */}
         {relatedProducts.length > 0 && (

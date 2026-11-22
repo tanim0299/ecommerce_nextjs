@@ -1,6 +1,13 @@
 <IfModule mod_headers.c>
-  # Hard No-Index: Block all search engines from indexing any page on this site
-  Header set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+  # Enable rich snippet & large image preview for Social Cards (Facebook, WhatsApp, Google)
+  Header set X-Robots-Tag "max-image-preview:large, max-snippet:-1"
+
+  # Force browsers & CDN to always fetch latest brand favicons
+  <FilesMatch "^(favicon\.(ico|png)|robots\.txt)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
 </IfModule>
 
 <IfModule mod_rewrite.c>

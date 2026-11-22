@@ -41,6 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
   let siteTitle = "SLOOR | Premium Apparel & Lifestyle";
   const siteDescription =
     "Premium clothing e-commerce retail store. Experience the finest combed cotton fabrics, refined tailoring, and modern designs for your everyday lifestyle.";
+  let ogImageUrl = "https://sloor.bd/favicon.png";
 
   try {
     const res = await fetch(`${cleanUrl}/system-config`, { cache: 'force-cache' });
@@ -48,6 +49,11 @@ export async function generateMetadata(): Promise<Metadata> {
       const json = await res.json();
       const cfg = json.data;
       if (cfg?.title) siteTitle = `${cfg.title}`;
+      if (cfg?.logo) {
+        const imageBasePath = process.env.NEXT_PUBLIC_IMAGE_BASE_PATH || 'https://admin.sloor.bd/';
+        const cleanImgBase = imageBasePath.endsWith('/') ? imageBasePath.slice(0, -1) : imageBasePath;
+        ogImageUrl = cfg.logo.startsWith('http') ? cfg.logo : `${cleanImgBase}${cfg.logo.startsWith('/') ? '' : '/'}${cfg.logo}`;
+      }
 
       const marketing = cfg?.marketing;
       const headScripts: string = marketing?.custom_head_scripts || '';
@@ -96,25 +102,45 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: siteDescription,
     robots: {
-      index: false,
-      follow: false,
-      nocache: true,
+      index: true,
+      follow: true,
       googleBot: {
-        index: false,
-        follow: false,
-        noimageindex: true,
+        index: true,
+        follow: true,
         "max-video-preview": -1,
-        "max-image-preview": "none",
+        "max-image-preview": "large",
         "max-snippet": -1,
       },
     },
+    openGraph: {
+      title: siteTitle,
+      description: siteDescription,
+      url: 'https://sloor.bd',
+      siteName: 'SLOOR BD - Luxury Fashion & Shoes',
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: siteTitle,
+        },
+      ],
+      type: 'website',
+      locale: 'en_US',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: siteTitle,
+      description: siteDescription,
+      images: [ogImageUrl],
+    },
     icons: {
       icon: [
-        { url: '/favicon.ico', sizes: 'any' },
-        { url: '/favicon.png', type: 'image/png' },
+        { url: '/favicon.ico?v=2', sizes: 'any' },
+        { url: '/favicon.png?v=2', type: 'image/png' },
       ],
-      shortcut: '/favicon.ico',
-      apple: '/favicon.png',
+      shortcut: '/favicon.ico?v=2',
+      apple: '/favicon.png?v=2',
     },
     verification: {
       google: googleVerification,
