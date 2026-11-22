@@ -30,8 +30,8 @@ export default async function BlogPage() {
 
   try {
     const [blogsRes, catsRes] = await Promise.all([
-      fetch(`${cleanUrl}/blogs?limit=50`, { cache: 'no-store' }),
-      fetch(`${cleanUrl}/blog-categories`, { cache: 'no-store' }),
+      fetch(`${cleanUrl}/blogs?limit=50`),
+      fetch(`${cleanUrl}/blog-categories`),
     ]);
 
     if (blogsRes.ok) {

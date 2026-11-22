@@ -14,9 +14,7 @@ export async function generateMetadata({
 
   let blogData: any = null;
   try {
-    const res = await fetch(`${cleanUrl}/blogs/${encodeURIComponent(slug)}`, {
-      cache: 'no-store',
-    });
+    const res = await fetch(`${cleanUrl}/blogs/${encodeURIComponent(slug)}`);
     if (res.ok) {
       const json = await res.json();
       blogData = json.data || json.result;
@@ -109,9 +107,7 @@ export default async function BlogDetailPage({
 
   let initialBlog: any = null;
   try {
-    const res = await fetch(`${cleanUrl}/blogs/${encodeURIComponent(slug)}`, {
-      cache: 'no-store',
-    });
+    const res = await fetch(`${cleanUrl}/blogs/${encodeURIComponent(slug)}`);
     if (res.ok) {
       const json = await res.json();
       initialBlog = json.data || json.result;

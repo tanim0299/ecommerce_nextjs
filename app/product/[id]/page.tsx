@@ -17,9 +17,7 @@ export async function generateMetadata({
 
   let product: any = null;
   try {
-    const res = await fetch(`${cleanUrl}/products/${encodeURIComponent(rawId)}`, {
-      cache: 'no-store',
-    });
+    const res = await fetch(`${cleanUrl}/products/${encodeURIComponent(rawId)}`);
     if (res.ok) {
       const json = await res.json();
       product = json.data || json.result;
@@ -66,13 +64,13 @@ export async function generateMetadata({
 
   const canonicalUrl = seo.canonical || `https://sloor.bd/product/${encodeURIComponent(product.slug || product.id)}`;
 
-  // Find the primary high-res image
+  // Find the primary product image (the user wants the product's first image in social share previews)
   let primaryImage = '';
   if (Array.isArray(product.images) && product.images.length > 0) {
+    // Sort by sl_no or take the very first image
+    const sorted = [...product.images].sort((a: any, b: any) => (Number(a.sl_no) || 999) - (Number(b.sl_no) || 999));
     const mainImg = product.images.find((img: any) => img.type?.toLowerCase() === 'main' && img.url);
-    const galleryImg = product.images.find((img: any) => img.type?.toLowerCase() === 'gallery' && img.url);
-    const anyImg = product.images.find((img: any) => img.url);
-    primaryImage = (mainImg || galleryImg || anyImg)?.url || '';
+    primaryImage = (mainImg || sorted[0] || product.images[0])?.url || '';
   }
 
   if (!primaryImage && Array.isArray(product.variants) && product.variants[0]?.image) {
@@ -84,7 +82,8 @@ export async function generateMetadata({
     if (primaryImage.startsWith('http://') || primaryImage.startsWith('https://')) {
       absoluteImageUrl = primaryImage;
     } else {
-      absoluteImageUrl = `${cleanImagePath}${primaryImage.startsWith('/') ? primaryImage.slice(1) : primaryImage}`;
+      const cleanPath = primaryImage.startsWith('/') ? primaryImage.slice(1) : primaryImage;
+      absoluteImageUrl = `${cleanImagePath}${cleanPath}`;
     }
   }
 
@@ -102,6 +101,7 @@ export async function generateMetadata({
       images: [
         {
           url: absoluteImageUrl,
+          secureUrl: absoluteImageUrl,
           width: 1200,
           height: 1200,
           alt: seo.image_alt || `${name} - SLOOR BD`,
@@ -123,7 +123,7 @@ export async function generateStaticParams() {
   try {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://admin.sloor.bd/api/';
     const cleanUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-    const res = await fetch(`${cleanUrl}/products`, { cache: 'no-store' });
+    const res = await fetch(`${cleanUrl}/products`);
     if (res.ok) {
       const json = await res.json();
       const items = json.result || json.data || [];

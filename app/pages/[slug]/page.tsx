@@ -14,9 +14,7 @@ export async function generateMetadata({
 
   let pageData: any = null;
   try {
-    const res = await fetch(`${cleanUrl}/pages/${encodeURIComponent(slug)}`, {
-      cache: 'no-store',
-    });
+    const res = await fetch(`${cleanUrl}/pages/${encodeURIComponent(slug)}`);
     if (res.ok) {
       const json = await res.json();
       pageData = json.data || json.result;

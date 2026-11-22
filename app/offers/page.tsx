@@ -15,7 +15,7 @@ export default async function OffersIndexPage() {
 
   let offers: any[] = [];
   try {
-    const res = await fetch(`${cleanUrl}/offers`, { cache: 'no-store' });
+    const res = await fetch(`${cleanUrl}/offers`);
     if (res.ok) {
       const json = await res.json();
       offers = json.result || json.data || [];

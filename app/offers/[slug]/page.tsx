@@ -14,9 +14,7 @@ export async function generateMetadata({
 
   let offerData: any = null;
   try {
-    const res = await fetch(`${cleanUrl}/offers/${encodeURIComponent(slug)}`, {
-      cache: 'no-store',
-    });
+    const res = await fetch(`${cleanUrl}/offers/${encodeURIComponent(slug)}`);
     if (res.ok) {
       const json = await res.json();
       offerData = json.data || json.result;
@@ -99,9 +97,7 @@ export default async function OfferCampaignPage({
 
   let initialOffer: any = null;
   try {
-    const res = await fetch(`${cleanUrl}/offers/${encodeURIComponent(slug)}`, {
-      cache: 'no-store',
-    });
+    const res = await fetch(`${cleanUrl}/offers/${encodeURIComponent(slug)}`);
     if (res.ok) {
       const json = await res.json();
       initialOffer = json.data || json.result;
